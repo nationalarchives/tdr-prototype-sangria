@@ -18,6 +18,8 @@ import uk.gov.nationalarchives.UserRegistryActor._
 import akka.pattern.ask
 import akka.util.Timeout
 
+import scala.util.Try
+
 // TODO: Rename
 //#user-routes-class
 trait UserRoutes extends JsonSupport {
@@ -89,7 +91,7 @@ trait UserRoutes extends JsonSupport {
       },
       pathPrefix("graphql") {
         get {
-          val graphQlResponse: Future[String] = (graphQlActor ? "some fake graphQL query").mapTo[String]
+          val graphQlResponse: Future[Try[String]] = (graphQlActor ? "{ hello }").mapTo[Try[String]]
           complete(graphQlResponse)
         }
       })
