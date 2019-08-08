@@ -18,6 +18,7 @@ import uk.gov.nationalarchives.UserRegistryActor._
 import akka.pattern.ask
 import akka.util.Timeout
 
+// TODO: Rename
 //#user-routes-class
 trait UserRoutes extends JsonSupport {
   //#user-routes-class
@@ -29,6 +30,7 @@ trait UserRoutes extends JsonSupport {
 
   // other dependencies that UserRoutes use
   def userRegistryActor: ActorRef
+  def graphQlActor: ActorRef
 
   // Required by the `ask` (?) method below
   implicit lazy val timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
@@ -87,7 +89,8 @@ trait UserRoutes extends JsonSupport {
       },
       pathPrefix("graphql") {
         get {
-          complete("Hello world")
+          val graphQlResponse: Future[String] = (graphQlActor ? "some fake graphQL query").mapTo[String]
+          complete(graphQlResponse)
         }
       })
   //#all-routes

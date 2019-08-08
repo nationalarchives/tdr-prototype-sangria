@@ -22,6 +22,7 @@ object QuickstartServer extends App with UserRoutes {
   //#server-bootstrapping
 
   val userRegistryActor: ActorRef = system.actorOf(UserRegistryActor.props, "userRegistryActor")
+  val graphQlActor: ActorRef = system.actorOf(GraphQlActor.props, "graphQlActor")
 
   //#main-class
   // from the UserRoutes trait
