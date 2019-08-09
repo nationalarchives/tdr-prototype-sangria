@@ -7,9 +7,10 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import uk.gov.nationalarchives.{ GraphQlRequest, GraphQlServer }
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.io.Source
-import scala.util.{ Failure, Success }
 
 class RequestHandler extends RequestStreamHandler {
   override def handleRequest(inputStream: InputStream, outputStream: OutputStream, context: Context): Unit = {
@@ -20,14 +21,19 @@ class RequestHandler extends RequestStreamHandler {
 
     val parsedRequest = decode[GraphQlRequest](inputString)
 
-    parsedRequest match {
+    val futureResponse = parsedRequest match {
       case Left(failure) => throw new RuntimeException(failure)
       case Right(graphQlRequest) =>
         val response = GraphQlServer.send(graphQlRequest)
-        response.onComplete {
-          case Success(json) => outputStream.write(json.toString.getBytes)
-          case Failure(e) => throw e
+        response.map { json =>
+          println("Returning:")
+          println(json.toString)
+          outputStream.write(json.toString.getBytes)
         }
     }
+
+    println("End of handleRequest method")
+
+    Await.result(futureResponse, 5.seconds)
   }
 }
