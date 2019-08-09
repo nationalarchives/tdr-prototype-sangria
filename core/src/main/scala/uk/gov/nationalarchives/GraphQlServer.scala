@@ -5,11 +5,11 @@ import sangria.ast.Document
 import sangria.execution.Executor
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
-import sangria.schema.{ Field, ObjectType, Schema, StringType, fields }
+import sangria.schema.{Field, ObjectType, Schema, StringType, fields}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{ Failure, Success, Try }
+import scala.util.{Failure, Success, Try}
 
 object GraphQlServer {
 
