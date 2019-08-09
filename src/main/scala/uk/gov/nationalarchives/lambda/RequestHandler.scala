@@ -16,9 +16,6 @@ class RequestHandler extends RequestStreamHandler {
   override def handleRequest(inputStream: InputStream, outputStream: OutputStream, context: Context): Unit = {
     val inputString = Source.fromInputStream(inputStream, "UTF-8").mkString
 
-    println("Input event:")
-    println(inputString)
-
     val parsedRequest = decode[GraphQlRequest](inputString)
 
     val futureResponse = parsedRequest match {
@@ -26,13 +23,9 @@ class RequestHandler extends RequestStreamHandler {
       case Right(graphQlRequest) =>
         val response = GraphQlServer.send(graphQlRequest)
         response.map { json =>
-          println("Returning:")
-          println(json.toString)
           outputStream.write(json.toString.getBytes)
         }
     }
-
-    println("End of handleRequest method")
 
     Await.result(futureResponse, 5.seconds)
   }
