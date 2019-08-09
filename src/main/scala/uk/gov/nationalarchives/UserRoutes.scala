@@ -17,6 +17,8 @@ import scala.concurrent.Future
 import uk.gov.nationalarchives.UserRegistryActor._
 import akka.pattern.ask
 import akka.util.Timeout
+import io.circe.Json
+import io.circe.parser._
 
 import scala.util.Try
 
@@ -90,9 +92,15 @@ trait UserRoutes extends JsonSupport {
         //#users-get-delete
       },
       pathPrefix("graphql") {
-        get {
-          val graphQlResponse: Future[Try[String]] = (graphQlActor ? "{ hello }").mapTo[Try[String]]
-          complete(graphQlResponse)
+        post {
+          // TODO: Should be JSON or something else?
+          entity(as[String]) {
+            graphQlQuery =>
+              {
+                val graphQlResponse: Future[Try[String]] = (graphQlActor ? graphQlQuery).mapTo[Try[String]]
+                complete(graphQlResponse)
+              }
+          }
         }
       })
   //#all-routes

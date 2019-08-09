@@ -2,7 +2,8 @@ package uk.gov.nationalarchives
 
 import akka.actor.{ Actor, ActorLogging, Props }
 import akka.pattern.pipe
-import io.circe.Json
+import io.circe.parser._
+import io.circe.{ Json, ParsingFailure }
 import sangria.ast.Document
 import sangria.execution._
 import sangria.marshalling.circe._
@@ -25,16 +26,27 @@ class GraphQlActor extends Actor with ActorLogging {
   val schema = Schema(QueryType)
 
   override def receive: Receive = {
-    case query: String =>
-      println(s"Got query '$query'")
-      val graphQlQuery: Try[Document] = QueryParser.parse(query)
+    case graphQlRequest: String =>
+      println(s"Got query '$graphQlRequest'")
 
-      // TODO: Work out whether to pass JSON, String or object back to server
-      graphQlQuery match {
-        case Success(doc) =>
-          val result: Future[Json] = Executor.execute(schema, doc)
-          result.map(json => Success(json.toString)) pipeTo sender()
-        case failure =>
+      val parsedJson: Either[ParsingFailure, Json] = parse(graphQlRequest)
+
+      parsedJson match {
+        case Right(json) =>
+          // TODO: Tidy up parsing. Does Sangria have a built-in way of doing this?
+          val query = json.findAllByKey("query").head.asString.get
+
+          val graphQlQuery: Try[Document] = QueryParser.parse(query)
+
+          graphQlQuery match {
+            case Success(doc) =>
+              val result: Future[Json] = Executor.execute(schema, doc)
+              // TODO: Work out whether to pass JSON, String or object back to server
+              result.map(json => Success(json.toString)) pipeTo sender()
+            case failure =>
+              sender ! failure
+          }
+        case Left(failure) =>
           sender ! failure
       }
     case other =>
