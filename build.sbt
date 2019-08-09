@@ -20,6 +20,9 @@ lazy val root = (project in file(".")).
       "org.scalatest"     %% "scalatest"            % "3.0.5"         % Test,
 
       "org.sangria-graphql" %% "sangria" % "1.4.2",
-      "org.sangria-graphql" %% "sangria-circe" % "1.2.1"
+      "org.sangria-graphql" %% "sangria-circe" % "1.2.1",
+
+      // TODO: Is there an equivalent in the SDK v2?
+      "com.amazonaws" % "aws-lambda-java-core" % "1.1.0"
     )
   )
