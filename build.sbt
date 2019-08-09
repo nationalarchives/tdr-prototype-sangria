@@ -1,6 +1,7 @@
 lazy val akkaHttpVersion = "10.1.9"
 lazy val akkaVersion    = "2.6.0-M5"
 
+// TODO: Split projects into core, Lambda and akka-http so that Lambda only includes what's necessary
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
@@ -8,6 +9,7 @@ lazy val root = (project in file(".")).
       scalaVersion    := "2.12.8"
     )),
     name := "TDR GraphQL akka-http API",
+    assemblyJarName in assembly := "tdr-api.jar",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
