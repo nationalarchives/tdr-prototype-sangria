@@ -9,11 +9,12 @@ import akka.http.scaladsl.server.directives.MethodDirectives.post
 import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.ask
 import akka.util.Timeout
-import spray.json.DefaultJsonProtocol
+import io.circe.Json
+import spray.json.{ DefaultJsonProtocol, RootJsonFormat }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.Try
+import scala.concurrent.ExecutionContext.Implicits.global
 
 trait Routes extends JsonSupport {
 
@@ -33,16 +34,15 @@ trait Routes extends JsonSupport {
         entity(as[GraphQlRequest]) {
           graphQlQuery =>
             {
-              val graphQlResponse: Future[Try[String]] = (graphQlActor ? graphQlQuery).mapTo[Try[String]]
-              complete(graphQlResponse)
+              val graphQlResponse: Future[Json] = (graphQlActor ? graphQlQuery).mapTo[Json]
+              // TODO: Prevent response from being converted from JSON to String and back to JSON again
+              complete(graphQlResponse.map(response => response.toString))
             }
         }
       }
     }
 }
 
-case class GraphQlRequest(query: String)
-
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-  implicit val graphQlRequestFormat = jsonFormat1(GraphQlRequest)
+  implicit val graphQlRequestFormat: RootJsonFormat[GraphQlRequest] = jsonFormat1(GraphQlRequest)
 }
