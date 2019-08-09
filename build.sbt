@@ -20,8 +20,6 @@ lazy val root = (project in file(".")).
       "org.scalatest"     %% "scalatest"            % "3.0.5"         % Test,
 
       "org.sangria-graphql" %% "sangria" % "1.4.2",
-      "org.sangria-graphql" %% "sangria-circe" % "1.2.1",
-
-      "io.circe" %% "circe-parser" % "0.9.3"
+      "org.sangria-graphql" %% "sangria-circe" % "1.2.1"
     )
   )
