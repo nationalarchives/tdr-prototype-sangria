@@ -6,7 +6,7 @@ import sangria.execution.Executor
 import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
-import sangria.schema.{Field, ObjectType, Schema, StringType, fields}
+import sangria.schema.{Field, ListType, ObjectType, Schema, StringType, fields}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -14,12 +14,11 @@ import scala.util.{Failure, Success, Try}
 
 object GraphQlServer {
 
-  val ConsignmentType = deriveObjectType[ConsignmentDao, Consignment]()
+  private val ConsignmentType = deriveObjectType[ConsignmentDao, Consignment]()
 
   val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
     Field("hello", StringType, resolve = _ ⇒ "Hello world!"),
-    // TODO: Return consignments
-    Field("getConsignments", ConsignmentType, resolve = ctx => ctx.ctx.consignments)
+    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments)
   ))
 
   val schema = Schema(QueryType)
@@ -43,11 +42,11 @@ object GraphQlServer {
 case class GraphQlRequest(query: String)
 
 trait ConsignmentDao {
-  def consignments: Consignment
+  def consignments: Seq[Consignment]
 }
 
 object ConsignmentDao extends ConsignmentDao {
-  override def consignments: Consignment = Consignment("Placeholder name")
+  override def consignments: Seq[Consignment] = List(Consignment("Placeholder name"), Consignment("Other name"))
 }
 
 case class Consignment(name: String)
