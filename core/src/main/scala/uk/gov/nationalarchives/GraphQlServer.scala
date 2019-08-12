@@ -6,7 +6,7 @@ import sangria.execution.Executor
 import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
-import sangria.schema.{Argument, Field, ListType, ObjectType, Schema, StringType, fields}
+import sangria.schema.{Argument, Field, IntType, ListType, ObjectType, OptionType, Schema, StringType, fields}
 import slick.jdbc.PostgresProfile.api._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,9 +17,16 @@ object GraphQlServer {
 
   private val ConsignmentType = deriveObjectType[ConsignmentDao, Consignment]()
   private val ConsignmentNameArg = Argument("name", StringType)
+  private val ConsignmentIdArg = Argument("id", IntType)
 
   private val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
-    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.all)
+    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.all),
+    Field(
+      "getConsignment",
+      OptionType(ConsignmentType),
+      arguments = List(ConsignmentIdArg),
+      resolve = ctx => ctx.ctx.get(ctx.arg(ConsignmentIdArg))
+    )
   ))
 
   private val MutationType = ObjectType("Mutation", fields[ConsignmentDao, Unit](
@@ -50,6 +57,7 @@ case class GraphQlRequest(query: String)
 
 trait ConsignmentDao {
   def all: Future[Seq[Consignment]]
+  def get(id: Int): Future[Option[Consignment]]
   def create(consignment: Consignment): Future[Consignment]
 }
 
@@ -74,6 +82,12 @@ object ConsignmentDao extends ConsignmentDao {
   override def all: Future[Seq[Consignment]] = {
     db.run(consignments.result).map(results => {
       results.map(result => Consignment(Some(result._1), result._2))
+    })
+  }
+
+  override def get(id: Int): Future[Option[Consignment]] = {
+    db.run(consignments.filter(_.id === id).result).map(results => {
+      results.headOption.map(result => Consignment(Some(result._1), result._2))
     })
   }
 
