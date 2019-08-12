@@ -17,11 +17,15 @@ object GraphQlServer {
   private val ConsignmentType = deriveObjectType[ConsignmentDao, Consignment]()
 
   val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
-    Field("hello", StringType, resolve = _ ⇒ "Hello world!"),
     Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments)
   ))
 
-  val schema = Schema(QueryType)
+  val MutationType = ObjectType("Mutation", fields[ConsignmentDao, Unit](
+    // TODO: Take name from query
+    Field("createConsignment", ConsignmentType, resolve = ctx => ctx.ctx.create(Consignment("new consignment")))
+  ))
+
+  val schema = Schema(QueryType, Some(MutationType))
 
   // TODO: Should return Json, object or String?
   def send(request: GraphQlRequest): Future[Json] = {
@@ -43,10 +47,13 @@ case class GraphQlRequest(query: String)
 
 trait ConsignmentDao {
   def consignments: Seq[Consignment]
+  def create(consignment: Consignment): Consignment
 }
 
 object ConsignmentDao extends ConsignmentDao {
   override def consignments: Seq[Consignment] = List(Consignment("Placeholder name"), Consignment("Other name"))
+  // TODO: Store consignment
+  override def create(consignment: Consignment): Consignment = consignment
 }
 
 case class Consignment(name: String)
