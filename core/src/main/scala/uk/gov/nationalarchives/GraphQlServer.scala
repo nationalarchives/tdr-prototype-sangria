@@ -32,7 +32,6 @@ object GraphQlServer {
 
   private val schema = Schema(QueryType, Some(MutationType))
 
-  // TODO: Should return Json, object or String?
   def send(request: GraphQlRequest): Future[Json] = {
     println(s"Got GraphQL request '$request'")
 
@@ -40,7 +39,6 @@ object GraphQlServer {
 
     query match {
       case Success(doc) =>
-        // TODO: Work out whether to pass JSON, String or object back to server
         Executor.execute(schema, doc, ConsignmentDao)
       case Failure(e) =>
         Future.failed(e)

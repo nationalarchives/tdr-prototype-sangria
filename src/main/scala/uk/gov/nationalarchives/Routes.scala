@@ -1,6 +1,6 @@
 package uk.gov.nationalarchives
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.event.Logging
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.server.Directives._
@@ -10,11 +10,11 @@ import akka.http.scaladsl.server.directives.RouteDirectives.complete
 import akka.pattern.ask
 import akka.util.Timeout
 import io.circe.Json
-import spray.json.{ DefaultJsonProtocol, RootJsonFormat }
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 trait Routes extends JsonSupport {
 
@@ -35,8 +35,7 @@ trait Routes extends JsonSupport {
           graphQlQuery =>
             {
               val graphQlResponse: Future[Json] = (graphQlActor ? graphQlQuery).mapTo[Json]
-              // TODO: Prevent response from being converted from JSON to String and back to JSON again
-              complete(graphQlResponse.map(response => response.toString))
+              complete(graphQlResponse.map(_.toString))
             }
         }
       }
