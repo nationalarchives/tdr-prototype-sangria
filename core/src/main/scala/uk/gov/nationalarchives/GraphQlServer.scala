@@ -13,8 +13,11 @@ import scala.util.{Failure, Success, Try}
 
 object GraphQlServer {
 
-  val QueryType = ObjectType("Query", fields[Unit, Unit](
-    Field("hello", StringType, resolve = _ ⇒ "Hello world!")))
+  val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
+    Field("hello", StringType, resolve = _ ⇒ "Hello world!"),
+    // TODO: Return consignments
+    Field("getConsignments", StringType, resolve = ctx => ctx.ctx.consignments)
+  ))
 
   val schema = Schema(QueryType)
 
@@ -27,7 +30,7 @@ object GraphQlServer {
     query match {
       case Success(doc) =>
         // TODO: Work out whether to pass JSON, String or object back to server
-        Executor.execute(schema, doc)
+        Executor.execute(schema, doc, ConsignmentDao)
       case Failure(e) =>
         Future.failed(e)
     }
@@ -35,3 +38,11 @@ object GraphQlServer {
 }
 
 case class GraphQlRequest(query: String)
+
+trait ConsignmentDao {
+  def consignments: String
+}
+
+object ConsignmentDao extends ConsignmentDao {
+  override def consignments: String = "placeholder list of consignments"
+}
