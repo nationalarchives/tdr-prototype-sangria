@@ -3,6 +3,7 @@ package uk.gov.nationalarchives
 import io.circe.Json
 import sangria.ast.Document
 import sangria.execution.Executor
+import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
 import sangria.schema.{Field, ObjectType, Schema, StringType, fields}
@@ -13,10 +14,12 @@ import scala.util.{Failure, Success, Try}
 
 object GraphQlServer {
 
+  val ConsignmentType = deriveObjectType[ConsignmentDao, Consignment]()
+
   val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
     Field("hello", StringType, resolve = _ ⇒ "Hello world!"),
     // TODO: Return consignments
-    Field("getConsignments", StringType, resolve = ctx => ctx.ctx.consignments)
+    Field("getConsignments", ConsignmentType, resolve = ctx => ctx.ctx.consignments)
   ))
 
   val schema = Schema(QueryType)
@@ -40,9 +43,11 @@ object GraphQlServer {
 case class GraphQlRequest(query: String)
 
 trait ConsignmentDao {
-  def consignments: String
+  def consignments: Consignment
 }
 
 object ConsignmentDao extends ConsignmentDao {
-  override def consignments: String = "placeholder list of consignments"
+  override def consignments: Consignment = Consignment("Placeholder name")
 }
+
+case class Consignment(name: String)
