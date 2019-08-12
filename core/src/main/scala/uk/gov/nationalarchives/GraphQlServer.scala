@@ -8,6 +8,7 @@ import sangria.marshalling.circe._
 import sangria.parser.QueryParser
 import sangria.schema.{Argument, Field, ListType, ObjectType, Schema, StringType, fields}
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -55,9 +56,15 @@ trait ConsignmentDao {
 }
 
 object ConsignmentDao extends ConsignmentDao {
-  override def consignments: Seq[Consignment] = List(Consignment("Placeholder name"), Consignment("Other name"))
-  // TODO: Store consignment
-  override def create(consignment: Consignment): Consignment = consignment
+
+  private val consignmentStore = new mutable.MutableList[Consignment]
+
+  override def consignments: Seq[Consignment] = consignmentStore
+
+  override def create(consignment: Consignment): Consignment = {
+    consignmentStore += consignment
+    consignment
+  }
 }
 
 case class Consignment(name: String)
