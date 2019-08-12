@@ -7,8 +7,8 @@ import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
 import sangria.schema.{Argument, Field, ListType, ObjectType, Schema, StringType, fields}
+import slick.jdbc.PostgresProfile.api._
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -19,7 +19,7 @@ object GraphQlServer {
   private val ConsignmentNameArg = Argument("name", StringType)
 
   private val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
-    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments)
+    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.all)
   ))
 
   private val MutationType = ObjectType("Mutation", fields[ConsignmentDao, Unit](
@@ -49,20 +49,40 @@ object GraphQlServer {
 case class GraphQlRequest(query: String)
 
 trait ConsignmentDao {
-  def consignments: Seq[Consignment]
-  def create(consignment: Consignment): Consignment
+  def all: Future[Seq[Consignment]]
+  def create(consignment: Consignment): Future[Consignment]
 }
 
 object ConsignmentDao extends ConsignmentDao {
 
-  private val consignmentStore = new mutable.MutableList[Consignment]
+  // Load PostgreSQL driver into classpath
+  Class.forName("org.postgresql.Driver")
 
-  override def consignments: Seq[Consignment] = consignmentStore
+  val db = Database.forURL(
+    url = "jdbc:postgresql://localhost/tdrapi",
+    user = "postgres",
+    password = "devdbpassword",
+    driver = "org.postgresql.Driver"
+  )
 
-  override def create(consignment: Consignment): Consignment = {
-    consignmentStore += consignment
-    consignment
+  val consignments = TableQuery[Consignments]
+
+  override def all: Future[Seq[Consignment]] = {
+    db.run(consignments.result).map(consignmentNames => {
+      consignmentNames.map(name => Consignment(name))
+    })
+  }
+
+  override def create(consignment: Consignment): Future[Consignment] = {
+    val insertAction = consignments += (consignment.name)
+    db.run(insertAction).map(_ => consignment)
   }
 }
 
 case class Consignment(name: String)
+
+class Consignments(tag: Tag) extends Table[(String)](tag, "consignments") {
+  def name = column[String]("name")
+
+  override def * = (name)
+}
