@@ -6,7 +6,7 @@ import sangria.execution.Executor
 import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
-import sangria.schema.{Field, ListType, ObjectType, Schema, StringType, fields}
+import sangria.schema.{Argument, Field, ListType, ObjectType, Schema, StringType, fields}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -15,17 +15,21 @@ import scala.util.{Failure, Success, Try}
 object GraphQlServer {
 
   private val ConsignmentType = deriveObjectType[ConsignmentDao, Consignment]()
+  private val ConsignmentNameArg = Argument("name", StringType)
 
-  val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
+  private val QueryType = ObjectType("Query", fields[ConsignmentDao, Unit](
     Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments)
   ))
 
-  val MutationType = ObjectType("Mutation", fields[ConsignmentDao, Unit](
-    // TODO: Take name from query
-    Field("createConsignment", ConsignmentType, resolve = ctx => ctx.ctx.create(Consignment("new consignment")))
+  private val MutationType = ObjectType("Mutation", fields[ConsignmentDao, Unit](
+    Field(
+      "createConsignment",
+      ConsignmentType,
+      arguments = List(ConsignmentNameArg),
+      resolve = ctx => ctx.ctx.create(Consignment(ctx.arg(ConsignmentNameArg))))
   ))
 
-  val schema = Schema(QueryType, Some(MutationType))
+  private val schema = Schema(QueryType, Some(MutationType))
 
   // TODO: Should return Json, object or String?
   def send(request: GraphQlRequest): Future[Json] = {
