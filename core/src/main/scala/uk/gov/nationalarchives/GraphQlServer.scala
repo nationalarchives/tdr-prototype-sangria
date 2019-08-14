@@ -8,6 +8,7 @@ import sangria.marshalling.circe._
 import sangria.parser.QueryParser
 import sangria.schema.{Argument, Field, IntType, ListType, ObjectType, OptionType, Schema, StringType, fields}
 import slick.jdbc.PostgresProfile.api._
+import uk.gov.nationalarchives.db.{DevDbConfig, PrototypeDbConfig}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -70,10 +71,15 @@ object ConsignmentDao extends ConsignmentDao {
   // Load PostgreSQL driver into classpath
   Class.forName("org.postgresql.Driver")
 
+  private val dbConfig = sys.env.get("TDR_API_ENVIRONMENT") match {
+    case Some("TEST") => PrototypeDbConfig
+    case _ => DevDbConfig
+  }
+
   val db = Database.forURL(
-    url = "jdbc:postgresql://localhost/tdrapi",
-    user = "postgres",
-    password = "devdbpassword",
+    url = dbConfig.url,
+    user = dbConfig.username,
+    password = dbConfig.password,
     driver = "org.postgresql.Driver"
   )
 
