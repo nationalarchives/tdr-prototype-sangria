@@ -29,7 +29,13 @@ lazy val lambda = (project in file("lambda"))
       "com.amazonaws" % "aws-lambda-java-core" % "1.1.0",
       "io.circe" %% "circe-parser" % "0.9.3",
       "io.circe" %% "circe-generic" % "0.9.3",
-    )
+    ),
+    assemblyMergeStrategy in assembly := {
+      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    }
   ).dependsOn(core)
 
 lazy val root = (project in file("."))
