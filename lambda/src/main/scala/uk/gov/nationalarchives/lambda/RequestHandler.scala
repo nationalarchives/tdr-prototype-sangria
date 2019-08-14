@@ -27,6 +27,6 @@ class RequestHandler extends RequestStreamHandler {
         }
     }
 
-    Await.result(futureResponse, 5.seconds)
+    Await.result(futureResponse, Duration.Inf)
   }
 }
