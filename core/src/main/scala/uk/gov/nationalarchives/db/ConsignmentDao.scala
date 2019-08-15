@@ -1,7 +1,7 @@
 package uk.gov.nationalarchives.db
 
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.TableQuery
+import slick.lifted.{ProvenShape, TableQuery}
 import uk.gov.nationalarchives.model.Consignment
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,41 +20,33 @@ class ConsignmentDao {
     case _ => DevDbConfig
   }
 
-  val db = Database.forURL(
+  private val db = Database.forURL(
     url = dbConfig.url,
     user = dbConfig.username,
     password = dbConfig.password,
     driver = "org.postgresql.Driver"
   )
 
-  val consignments = TableQuery[Consignments]
+  private val consignments = TableQuery[Consignments]
+
+  private val insertQuery = consignments returning consignments.map(_.id) into ((consignment, id) => consignment.copy(id = Some(id)))
 
   def all: Future[Seq[Consignment]] = {
-    db.run(consignments.result).map(results => {
-      results.map(result => Consignment(Some(result._1), result._2))
-    })
+    db.run(consignments.result)
   }
 
   def get(id: Int): Future[Option[Consignment]] = {
-    db.run(consignments.filter(_.id === id).result).map(results => {
-      results.headOption.map(result => Consignment(Some(result._1), result._2))
-    })
+    db.run(consignments.filter(_.id === id).result).map(_.headOption)
   }
 
   def create(consignment: Consignment): Future[Consignment] = {
-    // TODO: Examples use case class rather than tuple. How?
-    val insertQuery = consignments returning consignments.map(_.id) into ((consignment, id) => (id, consignment._2))
-
-    val insertAction = insertQuery += (dummyId, consignment.name)
-    db.run(insertAction).map(result => {
-      Consignment(Some(result._1), result._2)
-    })
+    db.run(insertQuery += consignment)
   }
 }
 
-class Consignments(tag: Tag) extends Table[(Int, String)](tag, "consignments") {
+class Consignments(tag: Tag) extends Table[Consignment](tag, "consignments") {
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
 
-  override def * = (id, name)
+  override def * : ProvenShape[Consignment] = (id.?, name).mapTo[Consignment]
 }
