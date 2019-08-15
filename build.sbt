@@ -1,5 +1,5 @@
 ThisBuild / organization := "uk.gov.nationalarchives"
-ThisBuild / scalaVersion := "2.12.8"
+ThisBuild / scalaVersion := "2.12.9"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
 lazy val akkaHttpVersion = "10.1.9"
