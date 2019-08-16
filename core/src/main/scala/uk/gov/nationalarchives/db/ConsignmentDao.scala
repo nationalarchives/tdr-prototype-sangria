@@ -2,7 +2,7 @@ package uk.gov.nationalarchives.db
 
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{ProvenShape, TableQuery}
-import uk.gov.nationalarchives.model.Consignment
+import uk.gov.nationalarchives.model.ConsignmentDbData
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -31,22 +31,28 @@ class ConsignmentDao {
 
   private val insertQuery = consignments returning consignments.map(_.id) into ((consignment, id) => consignment.copy(id = Some(id)))
 
-  def all: Future[Seq[Consignment]] = {
+  def all: Future[Seq[ConsignmentDbData]] = {
     db.run(consignments.result)
   }
 
-  def get(id: Int): Future[Option[Consignment]] = {
+  def get(id: Int): Future[Option[ConsignmentDbData]] = {
     db.run(consignments.filter(_.id === id).result).map(_.headOption)
   }
 
-  def create(consignment: Consignment): Future[Consignment] = {
+  def create(consignment: ConsignmentDbData): Future[ConsignmentDbData] = {
     db.run(insertQuery += consignment)
   }
 }
 
-class Consignments(tag: Tag) extends Table[Consignment](tag, "consignments") {
+class Consignments(tag: Tag) extends Table[ConsignmentDbData](tag, "consignments") {
+
+  // TODO: Where should this be defined? Dedup with SeriesDao
+  private val seriesQueries = TableQuery[SeriesTable]
+
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
+  def seriesId = column[Int]("series_id")
+  def series = foreignKey("consignment_series_fk", seriesId, seriesQueries)(_.id)
 
-  override def * : ProvenShape[Consignment] = (id.?, name).mapTo[Consignment]
+  override def * : ProvenShape[ConsignmentDbData] = (id.?, name, seriesId).mapTo[ConsignmentDbData]
 }
