@@ -16,35 +16,37 @@ import scala.util.{Failure, Success, Try}
 
 object GraphQlServer {
 
-  implicit private val SeriesType: ObjectType[SeriesService, SeriesResponse] = deriveObjectType[SeriesService, SeriesResponse]()
-  implicit private val ConsignmentType: ObjectType[ConsignmentService, ConsignmentResponse] = deriveObjectType[ConsignmentService, ConsignmentResponse]()
+  implicit private val SeriesType: ObjectType[Unit, SeriesResponse] = deriveObjectType[Unit, SeriesResponse]()
+  implicit private val ConsignmentType: ObjectType[Unit, ConsignmentResponse] = deriveObjectType[Unit, ConsignmentResponse]()
 
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
   private val SeriesIdArg = Argument("seriesId", IntType)
 
-  // TODO: Should take a more general service, not a consignment-specific one?
-  private val QueryType = ObjectType("Query", fields[ConsignmentService, Unit](
-    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.all),
+  private val QueryType = ObjectType("Query", fields[RequestContext, Unit](
+    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments.all),
     Field(
       "getConsignment",
       OptionType(ConsignmentType),
       arguments = List(ConsignmentIdArg),
-      resolve = ctx => ctx.ctx.get(ctx.arg(ConsignmentIdArg))
+      resolve = ctx => ctx.ctx.consignments.get(ctx.arg(ConsignmentIdArg))
     )
   ))
 
-  private val MutationType = ObjectType("Mutation", fields[ConsignmentService, Unit](
+  private val MutationType = ObjectType("Mutation", fields[RequestContext, Unit](
     Field(
       "createConsignment",
       ConsignmentType,
       arguments = List(ConsignmentNameArg, SeriesIdArg),
-      resolve = ctx => ctx.ctx.create(ctx.arg(ConsignmentNameArg), ctx.arg(SeriesIdArg)))
+      resolve = ctx => ctx.ctx.consignments.create(ctx.arg(ConsignmentNameArg), ctx.arg(SeriesIdArg)))
   ))
 
   private val schema = Schema(QueryType, Some(MutationType))
+
   // TODO: Inject dependencies
-  private val consignmentService = new ConsignmentService(new ConsignmentDao, new SeriesService(new SeriesDao))
+  private val seriesService = new SeriesService(new SeriesDao)
+  private val consignmentService = new ConsignmentService(new ConsignmentDao, seriesService)
+  private val requestContext = new RequestContext(seriesService, consignmentService)
 
   def send(request: GraphQlRequest): Future[Json] = {
     println(s"Got GraphQL request '$request'")
@@ -53,7 +55,7 @@ object GraphQlServer {
 
     query match {
       case Success(doc) =>
-        Executor.execute(schema, doc, consignmentService)
+        Executor.execute(schema, doc, requestContext)
       case Failure(e) =>
         Future.failed(e)
     }
@@ -64,6 +66,8 @@ case class GraphQlRequest(query: String)
 
 case class SeriesResponse(id: Int, name: String, description: String)
 case class ConsignmentResponse(id: Int, name: String, series: SeriesResponse)
+
+class RequestContext(val series: SeriesService, val consignments: ConsignmentService)
 
 class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesService) {
 
