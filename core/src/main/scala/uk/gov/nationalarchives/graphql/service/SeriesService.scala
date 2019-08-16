@@ -3,10 +3,9 @@ package uk.gov.nationalarchives.graphql.service
 import uk.gov.nationalarchives.Series
 import uk.gov.nationalarchives.db.dao.SeriesDao
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class SeriesService(seriesDao: SeriesDao) {
+class SeriesService(seriesDao: SeriesDao)(implicit val executionContext: ExecutionContext) {
   // TODO: This is a repetitive way of getting the series, and it suffers from the N+1 problem. Replace it with GraphQL
   // deferred resolvers.
   def get(id: Int): Future[Option[Series]] = {

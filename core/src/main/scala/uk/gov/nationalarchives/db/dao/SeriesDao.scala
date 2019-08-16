@@ -6,10 +6,9 @@ import uk.gov.nationalarchives.db.DbConnection
 import uk.gov.nationalarchives.db.dao.SeriesDao.seriesCollections
 import uk.gov.nationalarchives.db.model.SeriesRow
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class SeriesDao {
+class SeriesDao(implicit val executionContext: ExecutionContext) {
   private val db = DbConnection.db
 
   def get(id: Int): Future[Option[SeriesRow]] = {

@@ -7,10 +7,9 @@ import uk.gov.nationalarchives.db.dao.ConsignmentDao.consignments
 import uk.gov.nationalarchives.db.dao.SeriesDao.seriesCollections
 import uk.gov.nationalarchives.db.model.ConsignmentRow
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class ConsignmentDao {
+class ConsignmentDao(implicit val executionContext: ExecutionContext) {
   private val db = DbConnection.db
 
   private val insertQuery = consignments returning consignments.map(_.id) into ((consignment, id) => consignment.copy(id = Some(id)))

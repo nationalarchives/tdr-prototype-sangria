@@ -4,10 +4,9 @@ import uk.gov.nationalarchives.Consignment
 import uk.gov.nationalarchives.db.dao.ConsignmentDao
 import uk.gov.nationalarchives.db.model.ConsignmentRow
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesService) {
+class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesService)(implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[Consignment]] = {
     consignmentDao.all.flatMap(consignmentRows => {
