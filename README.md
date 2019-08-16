@@ -16,23 +16,138 @@ akka-http server, which can be run in development. The other is a request handle
 We are still trialling AWS Lambda for the API hosting. If cold starts turn out to be too slow, we may decide to deploy
 the akka-http server to an ECS host instead.
 
+### Database migrations
+
+This project depends on a Postgres database. It uses [Flyway] to run database migrations to keep the database in sync
+with the code.
+
+Migrations are run quite differently in the development and deployed environments, so see the sections below for more
+information on how to run them. 
+
+[Flyway]: https://flywaydb.org/
+
 ## Development
 
-To run the project in development, either run `sbt run` or run the `QuickstartServer` app from IntelliJ.
+### Prerequisites
 
-This will start a server at http://localhost:8080/. It currently just provides a GraphQL POST endpoint at
+Set up a PostreSQL database. One option is to run a [Postgres Docker image][postgres-docker].
+
+Follow the Docker guide to run the image and set the database password. Connect to your image with psql and create a
+database:
+
+```
+psql -h localhost -p 5432 -U postgres -W
+CREATE DATABASE tdrapi
+```
+
+Then run the database migrations (see below) to create the tables and seed data.
+
+[postgres-docker]: https://hub.docker.com/_/postgres
+
+### Database migrations
+
+When you first set up the project, or if new migrations have been added to the project, you will need to run the Flyway
+DB migrations.
+
+[Download and install the Flyway CLI][flyway-install].
+
+From the project root directory, run:
+
+```
+flyway -X -configFiles=migrations/conf/flyway.conf -locations=filesystem:migrations/sql/ migrate
+```
+
+[flyway-install]: https://flywaydb.org/download/
+
+### Run the server
+
+To run the project in development from the command line, run:
+
+```
+DB_URL=jdbc:postgresql://localhost/tdrapi DB_USERNAME=postgres DB_PASSWORD=abcde sbt run
+``` 
+
+updating the environment variables with your local DB settings.
+
+To run in IntelliJ, either run the `ApiServer` app or create an sbt configuration to run `sbt run`. Set the same
+environment variables as in the CLI option above. 
+
+Both options will start a server at http://localhost:8080/. It currently just provides a GraphQL POST endpoint at
 http://127.0.0.1:8080/graphql, which you can send queries to with curl, Postman or a GraphQL client.
 
 ## Deployment
 
-* Create a new Lambda function with a Java 8 runtime
-* Create a new API Gateway
-* Add a POST endpoint at /graphql, and set the integration type to "Lambda Function". Do not check "Use Lambda Proxy
+### Infrastructure
+
+We plan to add this API to our [Terraform config][tdr-terraform] soon, but to manually configure the infrastructure in
+the AWS console:
+
+[tdr-terraform]: https://github.com/nationalarchives/tdr-prototype-terraform 
+
+#### AWS Lambda
+
+- Create a new Lambda function with a Java 8 runtime
+- Set the entry point to be `uk.gov.nationalarchives.tdr.api.lambda.RequestHandler::handleRequest`
+- Set the timeout to at least 30 seconds
+- Set the environment variable `TDR_API_ENVIRONMENT` with value `TEST`
+
+#### AWS Aurora
+
+Create a new Aurora PostgreSQL database.
+
+#### Parameter Store
+
+In the AWS Systems Manager Parameter Store, add three new parameters:
+
+- Set `/tdr/prototype/api/db/url` to the Aurora cluster read-write endpoint, which will be something like
+  `cluster-name.cluster-abdefg.eu-west-2.rds.amazonaws.com`
+- Set `/tdr/prototype/api/db/username` to the Aurora DB username, which will probably be the default value `postgres`
+- Set `/tdr/prototype/api/db/password` to the Aurora DB password, which you can generate or set in the AWS console for
+  Aurora
+
+Ultimately, we'll want to store the DB password somewhere more secure than the parameter store, but this is currently
+just a prototype to transfer test data.
+
+#### API Gateway
+
+- Create a new API Gateway
+- Add a POST endpoint at /graphql, and set the integration type to "Lambda Function". Do not check "Use Lambda Proxy
   integration", since this would send the whole HTTP request to the Lambda. The request handler is configured to parse
   just the POST body, not the whole request.
-* Deploy the API Gateway
-* Build the lambda sbt project locally by running `sbt clean lambda/assembly`, which should build a jar file at
+- Add a Cognito authorizer pointing to your user pool
+- Deploy the Gateway
+
+#### ECS cluster
+
+The ECS cluster is used to run database migrations (see below).
+
+- Create an ECS cluster using Fargate as the container host
+- Create a task definition which also uses Fargate
+  - Define a container which points to the Docker image `docker.io/nationalarchives/tdr-prototype-db-migrations`
+  - Add environment variables `DB_PASSWORD`, `DB_URL` and `DB_USERNAME` which use `ValueFrom` to point to the parameters
+    you added to the parameter store
+
+### Deploy the API
+
+- Build the lambda sbt project locally by running `sbt clean lambda/assembly`, which should build a jar file at
   lambda/target/scala-2.12/tdr-api-lambda.jar
-* Upload the jar file to the Lambda in the AWS console
+- Upload the jar file to the Lambda in the AWS console
+
+### Database migrations
+
+We don't have currently have a stable CI environment, and we cannot connect to the DB from our dev machines because of
+network security rules. This means that the easiest place to run database migrations is in an AWS environment like an
+ECS container.
+
+To deploy the migrations, `cd` to the migrations folder and run:
+
+```
+docker build . --tag nationalarchives/tdr-prototype-db-migrations
+docker push nationalarchives/tdr-prototype-db-migrations
+```
+
+In the AWS console, go to the ECS cluster and run the task you defined earlier.
+
+### Test the deployed API
 
 You should then be able to POST GraphQL queries to your API Gateway URL (remembering to add `/graphql` to the end).
