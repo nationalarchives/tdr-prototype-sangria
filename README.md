@@ -51,6 +51,9 @@ DB migrations.
 
 [Download and install the Flyway CLI][flyway-install].
 
+Create a Flyway config file by copying migrations/conf/flyway.conf.template to migrations/conf/flyway.conf, and updating
+the values to match your local Postgres database.
+
 From the project root directory, run:
 
 ```
