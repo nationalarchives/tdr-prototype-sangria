@@ -1,11 +1,11 @@
-package uk.gov.nationalarchives.lambda
+package uk.gov.nationalarchives.tdr.api.lambda
 
-import java.io.{ InputStream, OutputStream }
+import java.io.{InputStream, OutputStream}
 
-import com.amazonaws.services.lambda.runtime.{ Context, RequestStreamHandler }
+import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.circe.generic.auto._
 import io.circe.parser.decode
-import uk.gov.nationalarchives.{ GraphQlRequest, GraphQlServer }
+import uk.gov.nationalarchives.tdr.api.core.{GraphQlRequest, GraphQlServer}
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global

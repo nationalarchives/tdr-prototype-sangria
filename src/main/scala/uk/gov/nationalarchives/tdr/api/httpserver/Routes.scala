@@ -1,4 +1,4 @@
-package uk.gov.nationalarchives
+package uk.gov.nationalarchives.tdr.api.httpserver
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.Logging
@@ -11,6 +11,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import io.circe.Json
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import uk.gov.nationalarchives.tdr.api.core.GraphQlRequest
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

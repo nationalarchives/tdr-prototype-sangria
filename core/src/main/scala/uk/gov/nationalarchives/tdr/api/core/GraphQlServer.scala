@@ -1,4 +1,4 @@
-package uk.gov.nationalarchives
+package uk.gov.nationalarchives.tdr.api.core
 
 import io.circe.Json
 import sangria.ast.Document
@@ -7,9 +7,9 @@ import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
 import sangria.schema.{Argument, Field, IntType, ListType, ObjectType, OptionType, Schema, StringType, fields}
-import uk.gov.nationalarchives.db.dao.{ConsignmentDao, SeriesDao}
-import uk.gov.nationalarchives.graphql.RequestContext
-import uk.gov.nationalarchives.graphql.service.{ConsignmentService, SeriesService}
+import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, SeriesDao}
+import uk.gov.nationalarchives.tdr.api.core.graphql.RequestContext
+import uk.gov.nationalarchives.tdr.api.core.graphql.service.{ConsignmentService, SeriesService}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

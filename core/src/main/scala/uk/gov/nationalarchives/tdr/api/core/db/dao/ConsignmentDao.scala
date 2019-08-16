@@ -1,11 +1,11 @@
-package uk.gov.nationalarchives.db.dao
+package uk.gov.nationalarchives.tdr.api.core.db.dao
 
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{ProvenShape, TableQuery}
-import uk.gov.nationalarchives.db.DbConnection
-import uk.gov.nationalarchives.db.dao.ConsignmentDao.consignments
-import uk.gov.nationalarchives.db.dao.SeriesDao.seriesCollections
-import uk.gov.nationalarchives.db.model.ConsignmentRow
+import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
+import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
+import uk.gov.nationalarchives.tdr.api.core.db.dao.SeriesDao.seriesCollections
+import uk.gov.nationalarchives.tdr.api.core.db.model.ConsignmentRow
 
 import scala.concurrent.{ExecutionContext, Future}
 

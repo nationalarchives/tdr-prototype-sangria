@@ -1,4 +1,4 @@
-package uk.gov.nationalarchives.db
+package uk.gov.nationalarchives.tdr.api.core.db
 
 import slick.jdbc.PostgresProfile.api._
 

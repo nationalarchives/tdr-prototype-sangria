@@ -1,4 +1,4 @@
-package uk.gov.nationalarchives
+package uk.gov.nationalarchives.tdr.api.httpserver
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http

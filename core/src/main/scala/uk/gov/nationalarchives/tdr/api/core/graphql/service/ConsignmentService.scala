@@ -1,8 +1,9 @@
-package uk.gov.nationalarchives.graphql.service
+package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
-import uk.gov.nationalarchives.Consignment
-import uk.gov.nationalarchives.db.dao.ConsignmentDao
-import uk.gov.nationalarchives.db.model.ConsignmentRow
+import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao
+import uk.gov.nationalarchives.tdr.api.core.db.model.ConsignmentRow
+import uk.gov.nationalarchives.tdr.api.core
+import uk.gov.nationalarchives.tdr.api.core.Consignment
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -12,7 +13,7 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
     consignmentDao.all.flatMap(consignmentRows => {
       val consignments = consignmentRows.map(consignmentRow =>
         seriesService.get(consignmentRow.seriesId).map(series =>
-          Consignment(consignmentRow.id.get, consignmentRow.name, series.get)
+          core.Consignment(consignmentRow.id.get, consignmentRow.name, series.get)
         )
       )
       Future.sequence(consignments)
@@ -22,7 +23,7 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
   def get(id: Int): Future[Option[Consignment]] = {
     consignmentDao.get(id).flatMap(_.map(consignmentRow =>
       seriesService.get(consignmentRow.seriesId).map(series =>
-        Consignment(consignmentRow.id.get, consignmentRow.name, series.get)
+        core.Consignment(consignmentRow.id.get, consignmentRow.name, series.get)
       )
     ) match {
       case Some(f) => f.map(Some(_))
@@ -36,7 +37,7 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
 
     result.flatMap(persistedConsignment =>
       seriesService.get(persistedConsignment.seriesId).map(series =>
-        Consignment(persistedConsignment.id.get, persistedConsignment.name, series.get)
+        core.Consignment(persistedConsignment.id.get, persistedConsignment.name, series.get)
       )
     )
   }

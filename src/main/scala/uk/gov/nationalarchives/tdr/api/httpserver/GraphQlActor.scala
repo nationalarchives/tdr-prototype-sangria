@@ -1,7 +1,8 @@
-package uk.gov.nationalarchives
+package uk.gov.nationalarchives.tdr.api.httpserver
 
-import akka.actor.{ Actor, ActorLogging, Props }
+import akka.actor.{Actor, ActorLogging, Props}
 import akka.pattern.pipe
+import uk.gov.nationalarchives.tdr.api.core.{GraphQlRequest, GraphQlServer}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Failure

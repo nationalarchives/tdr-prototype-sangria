@@ -1,4 +1,4 @@
-package uk.gov.nationalarchives.db
+package uk.gov.nationalarchives.tdr.api.core.db
 
 import software.amazon.awssdk.services.ssm.SsmClient
 import software.amazon.awssdk.services.ssm.model.GetParametersByPathRequest
