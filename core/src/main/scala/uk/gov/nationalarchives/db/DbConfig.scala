@@ -12,10 +12,9 @@ trait DbConfig {
 }
 
 object DevDbConfig extends DbConfig {
-  // TODO: Get values from environment variables
-  override val url: String = "jdbc:postgresql://localhost/tdrapi"
-  override val username: String = "postgres"
-  override val password: String = "devdbpassword"
+  override val url: String = sys.env("DB_URL")
+  override val username: String = sys.env("DB_USERNAME")
+  override val password: String = sys.env("DB_PASSWORD")
 }
 
 // This config object fetches all the values on startup. This is appropriate in AWS Lambda because we only need the
