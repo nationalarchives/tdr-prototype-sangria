@@ -32,7 +32,7 @@ trait Routes extends JsonSupport {
 
   //Use CORS' default settings to get local development to work.
   //Settings can be overridden using conf file or in code: https://github.com/lomigmegard/akka-http-cors
-  lazy val userRoutes: Route = cors() {
+  lazy val graphQlRoutes: Route = cors() {
       pathPrefix("graphql") {
         post {
           entity(as[GraphQlRequest]) {
