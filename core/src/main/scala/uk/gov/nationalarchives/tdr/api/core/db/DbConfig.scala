@@ -1,7 +1,7 @@
 package uk.gov.nationalarchives.tdr.api.core.db
 
 import software.amazon.awssdk.services.ssm.SsmClient
-import software.amazon.awssdk.services.ssm.model.GetParametersByPathRequest
+import software.amazon.awssdk.services.ssm.model.GetParametersRequest
 
 import scala.collection.JavaConverters._
 
@@ -24,14 +24,20 @@ object DevDbConfig extends DbConfig {
 // caching.
 object PrototypeDbConfig extends DbConfig {
 
+  private val dbUrlParamPath = sys.env("DB_URL_PARAM_PATH")
+  private val dbUsernameParamPath = sys.env("DB_USERNAME_PARAM_PATH")
+  private val dbPasswordParamPath = sys.env("DB_PASSWORD_PARAM_PATH")
+
   private val ssmClient = SsmClient.create
 
-  private val request = GetParametersByPathRequest.builder.path("/tdr/prototype/api/db").build
-  private val response = ssmClient.getParametersByPath(request)
+  private val request = GetParametersRequest.builder
+    .names(dbUrlParamPath, dbUsernameParamPath, dbPasswordParamPath)
+    .build
+  private val response = ssmClient.getParameters(request)
 
   private val parameters = response.parameters.asScala.map(param => (param.name, param.value)).toMap
 
-  override def url: String = parameters("/tdr/prototype/api/db/url")
-  override def username: String = parameters("/tdr/prototype/api/db/username")
-  override def password: String = parameters("/tdr/prototype/api/db/password")
+  override def url: String = parameters(dbUrlParamPath)
+  override def username: String = parameters(dbUsernameParamPath)
+  override def password: String = parameters(dbPasswordParamPath)
 }
