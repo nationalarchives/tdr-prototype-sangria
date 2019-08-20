@@ -16,6 +16,7 @@ import uk.gov.nationalarchives.tdr.api.core.GraphQlRequest
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import ch.megard.akka.http.cors.scaladsl.CorsDirectives._
 
 trait Routes extends JsonSupport {
 
@@ -29,18 +30,21 @@ trait Routes extends JsonSupport {
   // Required by the `ask` (?) method below
   private implicit lazy val timeout: Timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
 
-  lazy val userRoutes: Route =
-    pathPrefix("graphql") {
-      post {
-        entity(as[GraphQlRequest]) {
-          graphQlQuery =>
+  //Use CORS' default settings to get local development to work.
+  //Settings can be overridden using conf file or in code: https://github.com/lomigmegard/akka-http-cors
+  lazy val userRoutes: Route = cors() {
+      pathPrefix("graphql") {
+        post {
+          entity(as[GraphQlRequest]) {
+            graphQlQuery =>
             {
               val graphQlResponse: Future[Json] = (graphQlActor ? graphQlQuery).mapTo[Json]
               complete(graphQlResponse.map(_.toString))
             }
+          }
         }
       }
-    }
+  }
 }
 
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
