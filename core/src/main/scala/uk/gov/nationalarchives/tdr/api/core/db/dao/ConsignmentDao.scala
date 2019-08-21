@@ -28,7 +28,7 @@ class ConsignmentDao(implicit val executionContext: ExecutionContext) {
 }
 
 object ConsignmentDao {
-  private val consignments = TableQuery[ConsignmentsTable]
+  val consignments = TableQuery[ConsignmentsTable]
 }
 
 class ConsignmentsTable(tag: Tag) extends Table[ConsignmentRow](tag, "consignments") {
