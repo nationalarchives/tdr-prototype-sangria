@@ -17,7 +17,7 @@ object ApiServer extends App with Routes {
 
   val graphQlActor: ActorRef = system.actorOf(GraphQlActor.props, "graphQlActor")
 
-  lazy val routes: Route = userRoutes
+  lazy val routes: Route = graphQlRoutes
 
   val serverBinding: Future[Http.ServerBinding] = Http().bindAndHandle(routes, "localhost", 8080)
 
