@@ -48,6 +48,8 @@ lazy val root = (project in file("."))
       "com.typesafe.akka" %% "akka-http-xml"        % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
       "ch.megard"         %% "akka-http-cors"       % "0.4.1",
+      "de.heikoseeberger" %% "akka-http-circe"      % "1.27.0",
+      "io.circe"          %% "circe-generic"        % "0.9.3",
 
       "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,
