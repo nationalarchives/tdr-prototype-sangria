@@ -154,3 +154,86 @@ In the AWS console, go to the ECS cluster and run the task you defined earlier.
 ### Test the deployed API
 
 You should then be able to POST GraphQL queries to your API Gateway URL (remembering to add `/graphql` to the end).
+
+## Postman Example Queries and Mutations
+
+Some examples of queries and mutations for use with Postman.
+
+### "```GetConsignments```"
+
+```
+{ 
+       getConsignments {
+           name,
+           id,
+           series {
+               id,
+               name,
+               description
+           }
+       }
+   }
+```
+### "```CreateConsignments```"
+```
+mutation { 
+    createConsignment(name: "tkConsignment1", seriesId: 1) {
+        name,
+        id,
+        series {
+            id,
+            name,
+            description
+        }
+    }
+}
+```
+### "```GetFile```"
+```
+{ 
+    getFile(id: 1) {
+        path,
+        id,
+        consignment {
+            id,
+            name,
+            series {
+                id,
+                name,
+                description
+            }
+        }
+    }
+}
+```
+### "```GetFiles```"
+```{ 
+       getFiles {
+           path,
+           id,
+           consignment {
+               id,
+               name,
+               series {
+                   id,
+                   name,
+                   description
+               }
+           }
+       }
+   }
+
+```
+### "```CreateFile```"
+```
+mutation { 
+    createFile(path: "my/path/file2.txt", id: 5) {
+        path,
+        id,
+        consignment {
+            id,
+            name
+        }
+    }
+}
+```
