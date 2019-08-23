@@ -25,6 +25,7 @@ class FileDao(implicit val executionContext: ExecutionContext) {
   def create(file: FileRow): Future[FileRow] = {
     db.run(insertQuery += file)
   }
+
 }
 
 object FileDao {

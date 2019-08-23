@@ -6,10 +6,11 @@ import sangria.execution.Executor
 import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
-import sangria.schema.{Argument, Field, IntType, ListType, ObjectType, OptionType, Schema, StringType, fields}
-import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao, SeriesDao}
+import sangria.schema.BooleanType
+import sangria.schema.{Argument, Field, IntType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
+import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao, FileStatusDao, SeriesDao}
 import uk.gov.nationalarchives.tdr.api.core.graphql.RequestContext
-import uk.gov.nationalarchives.tdr.api.core.graphql.service.{ConsignmentService, FileService, SeriesService}
+import uk.gov.nationalarchives.tdr.api.core.graphql.service.{ConsignmentService, FileService, FileStatusService, SeriesService}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -26,6 +27,7 @@ object GraphQlServer {
   private val SeriesIdArg = Argument("seriesId", IntType)
   private val filePathArg = Argument("path", StringType)
   private val FileIdArg = Argument("id", IntType)
+  private val ChecksumArg = Argument("checksum", StringType)
 
   private val QueryType = ObjectType("Query", fields[RequestContext, Unit](
     Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments.all),
@@ -58,6 +60,12 @@ object GraphQlServer {
       FileType,
       arguments = List(filePathArg, ConsignmentIdArg),
       resolve = ctx => ctx.ctx.files.create(ctx.arg(filePathArg), ctx.arg(ConsignmentIdArg))
+    ),
+    Field(
+      "updateFileChecksum",
+      BooleanType,
+      arguments = List(FileIdArg, ChecksumArg),
+      resolve = ctx => ctx.ctx.fileStatuses.updateChecksum(ctx.arg(FileIdArg), ctx.arg(ChecksumArg))
     )
   ))
 
@@ -65,8 +73,10 @@ object GraphQlServer {
 
   private val seriesService = new SeriesService(new SeriesDao)
   private val consignmentService = new ConsignmentService(new ConsignmentDao, seriesService)
-  private val fileService = new FileService(new FileDao, consignmentService)
-  private val requestContext = new RequestContext(seriesService, consignmentService, fileService)
+  private val fileStatusService = new FileStatusService(new FileStatusDao())
+  private val fileService = new FileService(new FileDao, fileStatusService, consignmentService)
+  private val requestContext = new RequestContext(seriesService, consignmentService, fileService, fileStatusService)
+
 
   def send(request: GraphQlRequest): Future[Json] = {
     println(s"Got GraphQL request '$request'")
@@ -88,3 +98,4 @@ case class GraphQlRequest(query: String, operationName: Option[String], variable
 case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class File(id: Int, path: String, consignment: Consignment)
+case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, antivirusPassed: Boolean, fileFormatVerified: Boolean, fileId: Int)

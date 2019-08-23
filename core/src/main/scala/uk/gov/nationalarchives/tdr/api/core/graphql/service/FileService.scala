@@ -2,12 +2,12 @@ package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core
 import uk.gov.nationalarchives.tdr.api.core.File
-import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao}
-import uk.gov.nationalarchives.tdr.api.core.db.model.{ConsignmentRow, FileRow}
+import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
+import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileService(fileDao: FileDao, consignmentService: ConsignmentService)(implicit val executionContext: ExecutionContext) {
+class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consignmentService: ConsignmentService)(implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[File]] = {
     fileDao.all.flatMap(fileRows => {
@@ -35,10 +35,11 @@ class FileService(fileDao: FileDao, consignmentService: ConsignmentService)(impl
     val newFile = FileRow(None, path, consignmentId)
     val result = fileDao.create(newFile)
 
-    result.flatMap(persistedFile =>
+    result.flatMap(persistedFile => {
+      fileStatusService.create(persistedFile.id.get)
       consignmentService.get(persistedFile.consignmentId).map(consignment =>
         core.File(persistedFile.id.get, persistedFile.path, consignment.get)
-      )
+      )}
     )
   }
 }
