@@ -75,14 +75,15 @@ object GraphQlServer {
 
     query match {
       case Success(doc) =>
-        Executor.execute(schema, doc, requestContext)
+        val variables = request.variables.getOrElse(Json.obj())
+        Executor.execute(schema, doc, requestContext, operationName = request.operationName, variables = variables)
       case Failure(e) =>
         Future.failed(e)
     }
   }
 }
 
-case class GraphQlRequest(query: String)
+case class GraphQlRequest(query: String, operationName: Option[String], variables: Option[Json])
 
 case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
