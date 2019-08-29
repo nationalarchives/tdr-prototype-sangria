@@ -1,9 +1,10 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core
-import uk.gov.nationalarchives.tdr.api.core.File
-import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
-import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
+
+import uk.gov.nationalarchives.tdr.api.core.{CreateFileInput, File}
+import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao}
+import uk.gov.nationalarchives.tdr.api.core.db.model.{ConsignmentRow, FileRow}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,15 +32,25 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     })
   }
 
-  def create(path: String, consignmentId: Int): Future[File] = {
-    val newFile = FileRow(None, path, consignmentId)
+  def createMultiple(inputs: Seq[CreateFileInput]): Future[Seq[File]] = {
+    //TODO: this should be a sql that adds mutliple rows instead of iterating
+    val files = inputs.map(
+      input => {
+        create(input)
+      }
+    )
+    Future.sequence(files)
+  }
+
+  def create(input: CreateFileInput): Future[File] = {
+    val newFile = FileRow(None, input.path, input.consignmentId)
     val result = fileDao.create(newFile)
 
     for {
       persistedFile <- result
       _ <- fileStatusService.create(persistedFile.id.get)
     } yield
-      core.File(persistedFile.id.get, persistedFile.path, consignmentId)
+      core.File(persistedFile.id.get, persistedFile.path, input.consignmentId)
 
   }
 }

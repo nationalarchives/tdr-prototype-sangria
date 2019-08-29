@@ -225,9 +225,11 @@ mutation {
 
 ```
 ### "```CreateFile```"
+
+#### Postman Query
 ```
-mutation { 
-    createFile(path: "my/path/file2.txt", id: 5) {
+mutation($input: CreateFileInput!) { 
+    createFile(createFileInput: $input) {
         path,
         id,
         consignment {
@@ -235,5 +237,51 @@ mutation {
             name
         }
     }
+}
+```
+
+#### Postman GraphQl Variables
+```
+{
+    "input": {	     
+	    "path": "file/path/file1.txt", 
+	    "consignmentId": 1
+    }
+}
+```
+
+### "```CreateMultipleFiles```"
+
+#### Postman Query
+```
+mutation($input: [CreateFileInput!]!) { 
+    createMultipleFiles(createFileInputs: $input) {
+        path,
+        id,
+        consignment {
+            id,
+            name
+        }
+    }
+}
+```
+
+#### Postman GraphQl Variables
+```
+{
+    "input": [
+        {             
+            "path": "file/path/file1.txt", 
+            "consignmentId": 1
+    	},
+    	{            
+            "path": "file/path/file2.txt", 
+            "consignmentId": 1
+    	},
+    	{             
+            "path": "file/path/file3.txt", 
+            "consignmentId": 2
+    	}
+    ]
 }
 ```

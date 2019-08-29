@@ -38,7 +38,7 @@ trait Routes extends FailFastCirceSupport {
           entity(as[GraphQlRequest]) {
             graphQlRequest => {
               val graphQlResponse: Future[Json] = (graphQlActor ? graphQlRequest).mapTo[Json]
-              complete(graphQlResponse.map(_.toString))
+              complete(graphQlResponse)
             }
           }
         }

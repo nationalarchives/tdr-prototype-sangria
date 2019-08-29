@@ -16,7 +16,8 @@ lazy val core = (project in file("core"))
       "org.slf4j" % "slf4j-nop" % "1.7.26",
       "com.typesafe.slick" %% "slick-hikaricp" % "3.3.1",
       "org.postgresql" % "postgresql" % "42.2.6",
-      "software.amazon.awssdk" % "ssm" % "2.7.23"
+      "software.amazon.awssdk" % "ssm" % "2.7.23",
+      "io.circe" %% "circe-generic" % "0.9.3",      
     )
   )
 
@@ -27,8 +28,7 @@ lazy val lambda = (project in file("lambda"))
     libraryDependencies ++= Seq(
       // TODO: Is there an equivalent in the SDK v2?
       "com.amazonaws" % "aws-lambda-java-core" % "1.1.0",
-      "io.circe" %% "circe-parser" % "0.9.3",
-      "io.circe" %% "circe-generic" % "0.9.3",
+      "io.circe" %% "circe-parser" % "0.9.3",      
     ),
     assemblyMergeStrategy in assembly := {
       case "META-INF/io.netty.versions.properties" => MergeStrategy.first
@@ -49,8 +49,7 @@ lazy val root = (project in file("."))
       "com.typesafe.akka" %% "akka-stream"          % akkaVersion,
       "ch.megard"         %% "akka-http-cors"       % "0.4.1",
       "de.heikoseeberger" %% "akka-http-circe"      % "1.27.0",
-      "io.circe"          %% "circe-generic"        % "0.9.3",
-
+     
       "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,
       "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion     % Test,
