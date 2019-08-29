@@ -1,19 +1,20 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core
+
 import uk.gov.nationalarchives.tdr.api.core.{CreateFileInput, File}
 import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao}
 import uk.gov.nationalarchives.tdr.api.core.db.model.{ConsignmentRow, FileRow}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileService(fileDao: FileDao, consignmentService: ConsignmentService)(implicit val executionContext: ExecutionContext) {
+class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consignmentService: ConsignmentService)(implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[File]] = {
     fileDao.all.flatMap(fileRows => {
       val files = fileRows.map(fileRow =>
         consignmentService.get(fileRow.consignmentId).map(consignment =>
-          core.File(fileRow.id.get, fileRow.path, consignment.get)
+          core.File(fileRow.id.get, fileRow.path, consignment.get.id)
         )
       )
       Future.sequence(files)
@@ -23,7 +24,7 @@ class FileService(fileDao: FileDao, consignmentService: ConsignmentService)(impl
   def get(id: Int): Future[Option[File]] = {
     fileDao.get(id).flatMap(_.map(fileRow =>
       consignmentService.get(fileRow.consignmentId).map(consignment =>
-        core.File(fileRow.id.get, fileRow.path, consignment.get)
+        core.File(fileRow.id.get, fileRow.path, consignment.get.id)
       )
     ) match {
       case Some(f) => f.map(Some(_))
@@ -45,10 +46,11 @@ class FileService(fileDao: FileDao, consignmentService: ConsignmentService)(impl
     val newFile = FileRow(None, input.path, input.consignmentId)
     val result = fileDao.create(newFile)
 
-    result.flatMap(persistedFile =>
-      consignmentService.get(persistedFile.consignmentId).map(consignment =>
-        core.File(persistedFile.id.get, persistedFile.path, consignment.get)
-      )
-    )
+    for {
+      persistedFile <- result
+      _ <- fileStatusService.create(persistedFile.id.get)
+    } yield
+      core.File(persistedFile.id.get, persistedFile.path, input.consignmentId)
+
   }
 }
