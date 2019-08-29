@@ -6,7 +6,7 @@ import sangria.execution.Executor
 import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
-import sangria.schema.{Argument, Field, IntType, ListType, ObjectType, OptionType, Schema, StringType, fields}
+import sangria.schema.{Argument, Field, IntType, ListInputType, ListType, ObjectType, OptionType, Schema, StringType, fields}
 import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao, SeriesDao}
 import uk.gov.nationalarchives.tdr.api.core.graphql.RequestContext
 import uk.gov.nationalarchives.tdr.api.core.graphql.service.{ConsignmentService, FileService, SeriesService}
@@ -14,21 +14,27 @@ import uk.gov.nationalarchives.tdr.api.core.graphql.service.{ConsignmentService,
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
+import io.circe.generic.auto._
 
 object GraphQlServer {
 
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
   implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
+  implicit private val CreateFileInputType = deriveInputObjectType[CreateFileInput]()
 
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
   private val SeriesIdArg = Argument("seriesId", IntType)
-  private val filePathArg = Argument("path", StringType)
   private val FileIdArg = Argument("id", IntType)
+  private val FileInputArg = Argument("createFileInput", CreateFileInputType)
+  private val MultipleFileInputsArg = Argument("createFileInputs", ListInputType(CreateFileInputType))
 
   private val QueryType = ObjectType("Query", fields[RequestContext, Unit](
-    Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments.all),
+    Field(
+      "getConsignments",
+      ListType(ConsignmentType),
+      resolve = ctx => ctx.ctx.consignments.all),
     Field(
       "getConsignment",
       OptionType(ConsignmentType),
@@ -56,8 +62,14 @@ object GraphQlServer {
     Field(
       "createFile",
       FileType,
-      arguments = List(filePathArg, ConsignmentIdArg),
-      resolve = ctx => ctx.ctx.files.create(ctx.arg(filePathArg), ctx.arg(ConsignmentIdArg))
+      arguments = List(FileInputArg),
+      resolve = ctx => ctx.ctx.files.create(ctx.arg(FileInputArg))
+    ),
+    Field(
+      "createMultipleFiles",
+      ListType(FileType),
+      arguments = List(MultipleFileInputsArg),
+      resolve = ctx => ctx.ctx.files.createMultiple(ctx.arg(MultipleFileInputsArg))
     )
   ))
 
@@ -88,3 +100,4 @@ case class GraphQlRequest(query: String, operationName: Option[String], variable
 case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class File(id: Int, path: String, consignment: Consignment)
+case class CreateFileInput(path: String, consignmentId: Int)
