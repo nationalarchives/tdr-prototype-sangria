@@ -6,11 +6,11 @@ import sangria.execution.Executor
 import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.parser.QueryParser
-import sangria.schema.BooleanType
-import sangria.schema.{Argument, Field, IntType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
-import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao, FileStatusDao, SeriesDao}
+import sangria.schema.{Argument, BooleanType, Field, IntType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
+import uk.gov.nationalarchives.tdr.api.core.GraphQlServer.PronomIdArg
+import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao, FileFormatDao, FileStatusDao, SeriesDao}
 import uk.gov.nationalarchives.tdr.api.core.graphql.RequestContext
-import uk.gov.nationalarchives.tdr.api.core.graphql.service.{ConsignmentService, FileService, FileStatusService, SeriesService}
+import uk.gov.nationalarchives.tdr.api.core.graphql.service.{ConsignmentService, FileFormatService, FileService, FileStatusService, SeriesService}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -28,6 +28,8 @@ object GraphQlServer {
   private val filePathArg = Argument("path", StringType)
   private val FileIdArg = Argument("id", IntType)
   private val ChecksumArg = Argument("checksum", StringType)
+  private val VirusCheckStatusArg = Argument("status", StringType)
+  private val PronomIdArg = Argument("pronomId", StringType)
 
   private val QueryType = ObjectType("Query", fields[RequestContext, Unit](
     Field("getConsignments", ListType(ConsignmentType), resolve = ctx => ctx.ctx.consignments.all),
@@ -62,10 +64,27 @@ object GraphQlServer {
       resolve = ctx => ctx.ctx.files.create(ctx.arg(filePathArg), ctx.arg(ConsignmentIdArg))
     ),
     Field(
-      "updateFileChecksum",
+      "updateServerSideFileChecksum",
       BooleanType,
       arguments = List(FileIdArg, ChecksumArg),
-      resolve = ctx => ctx.ctx.fileStatuses.updateChecksum(ctx.arg(FileIdArg), ctx.arg(ChecksumArg))
+      resolve = ctx => ctx.ctx.fileStatuses.updateServerSideChecksum(ctx.arg(FileIdArg), ctx.arg(ChecksumArg))
+    ),
+    Field(
+      "updateClientSideFileChecksum",
+      BooleanType,
+      arguments = List(FileIdArg, ChecksumArg),
+      resolve = ctx => ctx.ctx.fileStatuses.updateClientSideChecksum(ctx.arg(FileIdArg), ctx.arg(ChecksumArg))
+    ),
+      Field(
+      "updateVirusCheck",
+      BooleanType,
+      arguments = List(FileIdArg, VirusCheckStatusArg),
+      resolve = ctx => ctx.ctx.fileStatuses.updateVirusCheck(ctx.arg(FileIdArg), ctx.arg(VirusCheckStatusArg))
+    ),
+    Field("updateFileFormat",
+      BooleanType,
+      arguments = List(FileIdArg, PronomIdArg),
+      resolve = ctx => ctx.ctx.fileFormats.create(ctx.arg(PronomIdArg), ctx.arg(FileIdArg))
     )
   ))
 
@@ -75,7 +94,8 @@ object GraphQlServer {
   private val consignmentService = new ConsignmentService(new ConsignmentDao, seriesService)
   private val fileStatusService = new FileStatusService(new FileStatusDao())
   private val fileService = new FileService(new FileDao, fileStatusService, consignmentService)
-  private val requestContext = new RequestContext(seriesService, consignmentService, fileService, fileStatusService)
+  private val fileFormatService = new FileFormatService(new FileFormatDao())
+  private val requestContext = new RequestContext(seriesService, consignmentService, fileService, fileStatusService, fileFormatService)
 
 
   def send(request: GraphQlRequest): Future[Json] = {
@@ -97,5 +117,5 @@ case class GraphQlRequest(query: String, operationName: Option[String], variable
 
 case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
-case class File(id: Int, path: String, consignment: Consignment)
-case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, antivirusPassed: Boolean, fileFormatVerified: Boolean, fileId: Int)
+case class File(id: Int, path: String, consignmentId: Int)
+case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: Int, antivirusStatus: String)

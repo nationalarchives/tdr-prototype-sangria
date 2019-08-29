@@ -19,7 +19,7 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
   private val insert = fileStatuses returning fileStatuses.map(_.id) into ((fileStatus, id) => fileStatus.copy(id = Some(id)))
 
   def create(fileId: Int): Future[FileStatus] = {
-    val fileStatus = FileStatus(None, false, false, fileId, "", "")
+    val fileStatus = FileStatus(None, false, fileId, "", "", "")
     db.run(insert += fileStatus)
   }
 
@@ -28,9 +28,21 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
     db.run(fileStatuses.filter(_.id === id).result).map(_.headOption)
   }
 
-  def updateChecksum(id: Int, checksum: String) = {
+  def updateServerSideChecksum(id: Int, checksum: String) = {
     val q = for { c <- fileStatuses if c.fileId === id } yield c.serverSideChecksum
     val updateAction = q.update(checksum)
+    db.run(updateAction)
+  }
+
+  def updateClientSideChecksum(id: Int, checksum: String) = {
+    val q = for { c <- fileStatuses if c.fileId === id } yield c.clientSideChecksum
+    val updateAction = q.update(checksum)
+    db.run(updateAction)
+  }
+
+  def updateVirusCheckStatus(id: Int, virusCheckStatus: String) = {
+    val q = for { c <- fileStatuses if c.fileId === id } yield c.antivirus_status
+    val updateAction = q.update(virusCheckStatus)
     db.run(updateAction)
   }
 }
@@ -41,12 +53,12 @@ object FileStatusDao {
 
 class FileStatusTable(tag: Tag) extends Table[FileStatus](tag, "file_status") {
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
-  def antiVirusPassed = column[Boolean]("antivirus_passed")
   def fileFormatVerified = column[Boolean]("file_format_verified")
   def fileId = column[Int]("file_id")
   def clientSideChecksum = column[String]("client_side_checksum")
   def serverSideChecksum = column[String]("server_side_checksum")
+  def antivirus_status = column[String]("antivirus_status")
   def file = foreignKey("file_file_status_fk", fileId, files)(_.id)
 
-  override def * = (id.?, antiVirusPassed, fileFormatVerified, fileId, clientSideChecksum, serverSideChecksum).mapTo[FileStatus]
+  override def * = (id.?, fileFormatVerified, fileId, clientSideChecksum, serverSideChecksum, antivirus_status).mapTo[FileStatus]
 }

@@ -13,7 +13,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     fileDao.all.flatMap(fileRows => {
       val files = fileRows.map(fileRow =>
         consignmentService.get(fileRow.consignmentId).map(consignment =>
-          core.File(fileRow.id.get, fileRow.path, consignment.get)
+          core.File(fileRow.id.get, fileRow.path, consignment.get.id)
         )
       )
       Future.sequence(files)
@@ -23,7 +23,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
   def get(id: Int): Future[Option[File]] = {
     fileDao.get(id).flatMap(_.map(fileRow =>
       consignmentService.get(fileRow.consignmentId).map(consignment =>
-        core.File(fileRow.id.get, fileRow.path, consignment.get)
+        core.File(fileRow.id.get, fileRow.path, consignment.get.id)
       )
     ) match {
       case Some(f) => f.map(Some(_))
@@ -35,11 +35,11 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     val newFile = FileRow(None, path, consignmentId)
     val result = fileDao.create(newFile)
 
-    result.flatMap(persistedFile => {
-      fileStatusService.create(persistedFile.id.get)
-      consignmentService.get(persistedFile.consignmentId).map(consignment =>
-        core.File(persistedFile.id.get, persistedFile.path, consignment.get)
-      )}
-    )
+    for {
+      persistedFile <- result
+      _ <- fileStatusService.create(persistedFile.id.get)
+    } yield
+      core.File(persistedFile.id.get, persistedFile.path, consignmentId)
+
   }
 }
