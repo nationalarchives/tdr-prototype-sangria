@@ -100,4 +100,4 @@ case class GraphQlRequest(query: String, operationName: Option[String], variable
 case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class File(id: Int, path: String, consignment: Consignment)
-case class CreateFileInput(id: Int, path: String, consignmentId: Int)
+case class CreateFileInput(path: String, consignmentId: Int)
