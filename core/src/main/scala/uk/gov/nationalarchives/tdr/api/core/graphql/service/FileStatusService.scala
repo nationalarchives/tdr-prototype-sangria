@@ -8,7 +8,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionContext: ExecutionContext) {
   def updateServerSideChecksum(id: Int, checksum: String): Future[Boolean] = {
     fileStatusDao.updateServerSideChecksum(id, checksum).map(a => {
-      println(a)
       if(a != 1) {
         throw new RuntimeException("Too many or not enough rows")
       }
@@ -18,7 +17,6 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
 
   def updateClientSideChecksum(id: Int, checksum: String): Future[Boolean] = {
     fileStatusDao.updateClientSideChecksum(id, checksum).map(a => {
-      println(a)
       if(a != 1) {
         throw new RuntimeException("Too many or not enough rows")
       }
@@ -29,7 +27,6 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
 
   def updateVirusCheck(id: Int, virusCheckStatus: String): Future[Boolean] = {
     fileStatusDao.updateVirusCheckStatus(id, virusCheckStatus).map(a => {
-      println(a)
       if(a != 1) {
         throw new RuntimeException("Too many or not enough rows")
       }
