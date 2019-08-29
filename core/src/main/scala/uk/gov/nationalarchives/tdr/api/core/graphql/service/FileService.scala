@@ -32,6 +32,7 @@ class FileService(fileDao: FileDao, consignmentService: ConsignmentService)(impl
   }
 
   def createMultiple(inputs: Seq[CreateFileInput]): Future[Seq[File]] = {
+    //TODO: this should be a sql that adds mutliple rows instead of iterating
     val files = inputs.map(
       input => {
         create(input)
