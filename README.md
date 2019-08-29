@@ -243,8 +243,7 @@ mutation($input: CreateFileInput!) {
 #### Postman GraphQl Variables
 ```
 {
-    "input": {
-	    "id": 321, 
+    "input": {	     
 	    "path": "file/path/file1.txt", 
 	    "consignmentId": 1
     }
@@ -271,18 +270,15 @@ mutation($input: [CreateFileInput!]!) {
 ```
 {
     "input": [
-        {
-            "id": 321, 
+        {             
             "path": "file/path/file1.txt", 
             "consignmentId": 1
     	},
-    	{
-            "id": 321, 
+    	{            
             "path": "file/path/file2.txt", 
             "consignmentId": 1
     	},
-    	{
-            "id": 321, 
+    	{             
             "path": "file/path/file3.txt", 
             "consignmentId": 2
     	}
