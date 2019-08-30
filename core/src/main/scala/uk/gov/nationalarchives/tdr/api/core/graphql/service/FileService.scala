@@ -1,35 +1,39 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core
-
+import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
+import uk.gov.nationalarchives.tdr.api.core.db.model.{FileFormat, FileRow}
 import uk.gov.nationalarchives.tdr.api.core.{CreateFileInput, File}
-import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao}
-import uk.gov.nationalarchives.tdr.api.core.db.model.{ConsignmentRow, FileRow}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consignmentService: ConsignmentService)(implicit val executionContext: ExecutionContext) {
+class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consignmentService: ConsignmentService, fileFormatService: FileFormatService)(implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[File]] = {
     fileDao.all.flatMap(fileRows => {
       val files = fileRows.map(fileRow =>
         consignmentService.get(fileRow.consignmentId).map(consignment =>
-          core.File(fileRow.id.get, fileRow.path, consignment.get.id)
+          core.File(fileRow.id.get, fileRow.path, consignment.get.id, null, null)
         )
       )
       Future.sequence(files)
     })
   }
 
-  def get(id: Int): Future[Option[File]] = {
-    fileDao.get(id).flatMap(_.map(fileRow =>
-      consignmentService.get(fileRow.consignmentId).map(consignment =>
-        core.File(fileRow.id.get, fileRow.path, consignment.get.id)
-      )
-    ) match {
-      case Some(f) => f.map(Some(_))
-      case None => Future.successful(None)
-    })
+  def get(id: Int) = {
+    for {
+      fileOption <- fileDao.get(id)
+      file <- fileOption.map(Future.successful).getOrElse(Future.failed(new Exception))
+      fileStatusOption <- fileStatusService.getByFileId(fileOption.get.id.get)
+      fileStatus <- fileStatusOption.map(Future.successful).getOrElse(Future.failed(new Exception))
+      fileFormat <- fileFormatService.getByFileId(file.id.get)
+    } yield core.File(file.id.get, file.path, file.consignmentId,
+      core.FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus),
+      fileFormat match {
+      case Some(fmt) => fmt.pronomId
+      case None => ""
+    }
+    )
   }
 
   def createMultiple(inputs: Seq[CreateFileInput]): Future[Seq[File]] = {
@@ -48,9 +52,12 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
 
     for {
       persistedFile <- result
-      _ <- fileStatusService.create(persistedFile.id.get)
+      fileStatus <- fileStatusService.create(persistedFile.id.get)
     } yield
-      core.File(persistedFile.id.get, persistedFile.path, input.consignmentId)
+      core.File(persistedFile.id.get, persistedFile.path, input.consignmentId,
+        core.FileStatus(fileStatus.id, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus)
+        ,null
+      )
 
   }
 }

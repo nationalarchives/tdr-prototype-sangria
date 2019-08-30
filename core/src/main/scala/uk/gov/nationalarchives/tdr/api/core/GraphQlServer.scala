@@ -21,6 +21,7 @@ object GraphQlServer {
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
   implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
+  implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType = deriveInputObjectType[CreateFileInput]()
 
   private val ConsignmentNameArg = Argument("name", StringType)
@@ -104,8 +105,8 @@ object GraphQlServer {
   private val seriesService = new SeriesService(new SeriesDao)
   private val consignmentService = new ConsignmentService(new ConsignmentDao, seriesService)
   private val fileStatusService = new FileStatusService(new FileStatusDao())
-  private val fileService = new FileService(new FileDao, fileStatusService, consignmentService)
   private val fileFormatService = new FileFormatService(new FileFormatDao())
+  private val fileService = new FileService(new FileDao, fileStatusService, consignmentService, fileFormatService)
   private val requestContext = new RequestContext(seriesService, consignmentService, fileService, fileStatusService, fileFormatService)
 
 
@@ -130,5 +131,5 @@ case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: Int, antivirusStatus: String)
 
-case class File(id: Int, path: String, consignment: Consignment)
+case class File(id: Int, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: String)
 case class CreateFileInput(path: String, consignmentId: Int)

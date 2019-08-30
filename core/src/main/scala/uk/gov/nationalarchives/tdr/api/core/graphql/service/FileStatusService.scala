@@ -2,6 +2,7 @@ package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core.FileStatus
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileStatusDao
+import uk.gov.nationalarchives.tdr.api.core.db.model
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,5 +38,9 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
   def create(fileId: Int): Future[FileStatus] = {
     fileStatusDao.create(fileId)
       .map(fs => FileStatus(fs.id.get, fs.clientSideChecksum, fs.serverSideChecksum, fs.fileFormatVerified, fs.fileId, fs.antivirusStatus))
+  }
+
+  def getByFileId(fileId: Int): Future[Option[model.FileStatus]] = {
+    fileStatusDao.getByFileId(fileId)
   }
 }
