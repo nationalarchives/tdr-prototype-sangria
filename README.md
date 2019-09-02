@@ -34,7 +34,7 @@ Set up a PostreSQL database. One option is to run a [Postgres Docker image][post
 
 #### Docker Setup
 
-When setting up the docker container ensure the run command is as follows, including the port information after the -d argument:
+When setting up the docker container ensure the run command is as follows, including the port information before the container name argument:
 
 ```
 $ docker run --name some-postgres -e POSTGRES_PASSWORD=yourpassword -d -p 5432:5432 postgres
