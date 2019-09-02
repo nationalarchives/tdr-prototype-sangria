@@ -3,8 +3,8 @@ package uk.gov.nationalarchives.tdr.api.core.graphql.service
 import uk.gov.nationalarchives.tdr.api.core
 
 import uk.gov.nationalarchives.tdr.api.core.{CreateFileInput, File}
-import uk.gov.nationalarchives.tdr.api.core.db.dao.{ConsignmentDao, FileDao}
-import uk.gov.nationalarchives.tdr.api.core.db.model.{ConsignmentRow, FileRow}
+import uk.gov.nationalarchives.tdr.api.core.db.dao.{FileDao}
+import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -14,7 +14,8 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     fileDao.all.flatMap(fileRows => {
       val files = fileRows.map(fileRow =>
         consignmentService.get(fileRow.consignmentId).map(consignment =>
-          core.File(fileRow.id.get, fileRow.path, consignment.get.id)
+          core.File(fileRow.id.get, fileRow.path, consignment.get.id, fileRow.fileSize, fileRow.lastModifiedDate,
+            fileRow.fileName)
         )
       )
       Future.sequence(files)
@@ -24,7 +25,8 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
   def get(id: Int): Future[Option[File]] = {
     fileDao.get(id).flatMap(_.map(fileRow =>
       consignmentService.get(fileRow.consignmentId).map(consignment =>
-        core.File(fileRow.id.get, fileRow.path, consignment.get.id)
+        core.File(fileRow.id.get, fileRow.path, consignment.get.id, fileRow.fileSize, fileRow.lastModifiedDate,
+          fileRow.fileName)
       )
     ) match {
       case Some(f) => f.map(Some(_))
@@ -43,14 +45,14 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
   }
 
   def create(input: CreateFileInput): Future[File] = {
-    val newFile = FileRow(None, input.path, input.consignmentId)
+    val newFile = FileRow(None, input.path, input.consignmentId, input.fileSize, input.lastModifiedDate, input.fileName)
     val result = fileDao.create(newFile)
 
     for {
       persistedFile <- result
-      _ <- fileStatusService.create(persistedFile.id.get)
+      _ <- fileStatusService.create(persistedFile.id.get, input.clientSideChecksum)
     } yield
-      core.File(persistedFile.id.get, persistedFile.path, input.consignmentId)
+      core.File(persistedFile.id.get, persistedFile.path, persistedFile.consignmentId, persistedFile.fileSize, persistedFile.lastModifiedDate, persistedFile.fileName)
 
   }
 }

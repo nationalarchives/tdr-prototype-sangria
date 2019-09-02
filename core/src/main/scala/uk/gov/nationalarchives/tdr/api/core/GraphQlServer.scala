@@ -1,5 +1,7 @@
 package uk.gov.nationalarchives.tdr.api.core
 
+import java.util.Date
+
 import io.circe.Json
 import io.circe.generic.auto._
 import sangria.ast.Document
@@ -129,6 +131,6 @@ case class GraphQlRequest(query: String, operationName: Option[String], variable
 case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: Int, antivirusStatus: String)
-
-case class File(id: Int, path: String, consignment: Consignment)
-case class CreateFileInput(path: String, consignmentId: Int)
+//TODO: need to define a custom scalar date type to store dates in DB
+case class File(id: Int, path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: String, fileName: String)
+case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: String, fileName: String, clientSideChecksum: String)
