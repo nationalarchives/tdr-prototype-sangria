@@ -1,10 +1,12 @@
 package uk.gov.nationalarchives.tdr.api.core.db.dao
 
+import java.util.Date
+
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{TableQuery, Tag}
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
-import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow}
+import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
 import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +38,10 @@ class FileTable(tag: Tag) extends Table[FileRow](tag, "file") {
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
   def path = column[String]("path")
   def consignmentId = column[Int]("consignment_id")
+  def fileSize = column[Int]("file_size")
+  def lastModifiedDate = column[String]("last_modified_date")
+  def fileName = column[String]("file_name")
   def consignment = foreignKey("file_consignment_fk", consignmentId, consignments)(_.id)
 
-  override def * = (id.?, path, consignmentId).mapTo[FileRow]
+  override def * = (id.?, path, consignmentId, fileSize, lastModifiedDate, fileName).mapTo[FileRow]
 }

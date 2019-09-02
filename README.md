@@ -32,6 +32,14 @@ information on how to run them.
 
 Set up a PostreSQL database. One option is to run a [Postgres Docker image][postgres-docker].
 
+#### Docker Setup
+
+When setting up the docker container ensure the run command is as follows, including the port information after the -d argument:
+
+```
+$ docker run --name some-postgres -e POSTGRES_PASSWORD=yourpassword -d -p 5432:5432 postgres
+```
+
 Follow the Docker guide to run the image and set the database password. Connect to your image with psql and create a
 database:
 
@@ -194,16 +202,11 @@ mutation {
     getFile(id: 1) {
         path,
         id,
-        consignment {
-            id,
-            name,
-            series {
-                id,
-                name,
-                description
-            }
-        }
-    }
+        consignmentId,
+        fileSize,
+        fileName,
+        lastModifiedDate
+     }
 }
 ```
 ### "```GetFiles```"
@@ -211,15 +214,10 @@ mutation {
        getFiles {
            path,
            id,
-           consignment {
-               id,
-               name,
-               series {
-                   id,
-                   name,
-                   description
-               }
-           }
+           consignmentId,
+           fileSize,
+           fileName,
+           lastModifiedDate
        }
    }
 
@@ -232,10 +230,10 @@ mutation($input: CreateFileInput!) {
     createFile(createFileInput: $input) {
         path,
         id,
-        consignment {
-            id,
-            name
-        }
+        consignmentId,
+        fileSize,
+        fileName,
+        lastModifiedDate
     }
 }
 ```
@@ -244,8 +242,12 @@ mutation($input: CreateFileInput!) {
 ```
 {
     "input": {	     
-	    "path": "file/path/file1.txt", 
-	    "consignmentId": 1
+        "fileSize": 11,
+        "fileName": "file1",
+        "lastModifiedDate": "12345667",
+        "path": "file/path/file1.txt", 
+        "consignmentId": 1,
+        "clientSideChecksum": "abcd12345"
     }
 }
 ```
@@ -258,10 +260,10 @@ mutation($input: [CreateFileInput!]!) {
     createMultipleFiles(createFileInputs: $input) {
         path,
         id,
-        consignment {
-            id,
-            name
-        }
+        consignmentId,
+        fileSize,
+        fileName,
+        lastModifiedDate
     }
 }
 ```
@@ -270,18 +272,30 @@ mutation($input: [CreateFileInput!]!) {
 ```
 {
     "input": [
-        {             
-            "path": "file/path/file1.txt", 
-            "consignmentId": 1
-    	},
-    	{            
-            "path": "file/path/file2.txt", 
-            "consignmentId": 1
-    	},
-    	{             
-            "path": "file/path/file3.txt", 
-            "consignmentId": 2
-    	}
+        {
+            "fileSize": 11,
+            "fileName": "file1",
+        	"lastModifiedDate": "12345667",
+        	"path": "file/path/file1.txt", 
+        	"consignmentId": 1,
+        	"clientSideChecksum": "abcd12345"
+        },
+        {
+        	"fileSize": 11,
+        	"fileName": "file2",
+        	"lastModifiedDate": "12345667",
+        	"path": "file/path/file2.txt", 
+        	"consignmentId": 1,
+        	"clientSideChecksum": "abcd12345"
+        },
+        {
+        	"fileSize": 11,
+        	"fileName": "file3",
+        	"lastModifiedDate": "12345667",
+        	"path": "file/path/file3.txt", 
+        	"consignmentId": 1,
+        	"clientSideChecksum": "abcd12345"
+        }
     ]
 }
 ```
