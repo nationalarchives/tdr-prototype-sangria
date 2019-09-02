@@ -1,10 +1,9 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
-import uk.gov.nationalarchives.tdr.api.core
-
-import uk.gov.nationalarchives.tdr.api.core.{CreateFileInput, File}
-import uk.gov.nationalarchives.tdr.api.core.db.dao.{FileDao}
-import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow}
+import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
+import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
+import uk.gov.nationalarchives.tdr.api.core.graphql
+import uk.gov.nationalarchives.tdr.api.core.graphql.File
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -14,7 +13,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     fileDao.all.flatMap(fileRows => {
       val files = fileRows.map(fileRow =>
         consignmentService.get(fileRow.consignmentId).map(consignment =>
-          core.File(fileRow.id.get, fileRow.path, consignment.get.id, fileRow.fileSize, fileRow.lastModifiedDate,
+          File(fileRow.id.get, fileRow.path, consignment.get.id, fileRow.fileSize, fileRow.lastModifiedDate,
             fileRow.fileName)
         )
       )
@@ -25,7 +24,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
   def get(id: Int): Future[Option[File]] = {
     fileDao.get(id).flatMap(_.map(fileRow =>
       consignmentService.get(fileRow.consignmentId).map(consignment =>
-        core.File(fileRow.id.get, fileRow.path, consignment.get.id, fileRow.fileSize, fileRow.lastModifiedDate,
+        File(fileRow.id.get, fileRow.path, consignment.get.id, fileRow.fileSize, fileRow.lastModifiedDate,
           fileRow.fileName)
       )
     ) match {
@@ -34,7 +33,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     })
   }
 
-  def createMultiple(inputs: Seq[CreateFileInput]): Future[Seq[File]] = {
+  def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {
     //TODO: this should be a sql that adds mutliple rows instead of iterating
     val files = inputs.map(
       input => {
@@ -44,7 +43,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     Future.sequence(files)
   }
 
-  def create(input: CreateFileInput): Future[File] = {
+  def create(input: graphql.CreateFileInput): Future[File] = {
     val newFile = FileRow(None, input.path, input.consignmentId, input.fileSize, input.lastModifiedDate, input.fileName)
     val result = fileDao.create(newFile)
 
@@ -52,7 +51,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       persistedFile <- result
       _ <- fileStatusService.create(persistedFile.id.get, input.clientSideChecksum)
     } yield
-      core.File(persistedFile.id.get, persistedFile.path, persistedFile.consignmentId, persistedFile.fileSize, persistedFile.lastModifiedDate, persistedFile.fileName)
+      File(persistedFile.id.get, persistedFile.path, persistedFile.consignmentId, persistedFile.fileSize, persistedFile.lastModifiedDate, persistedFile.fileName)
 
   }
 }
