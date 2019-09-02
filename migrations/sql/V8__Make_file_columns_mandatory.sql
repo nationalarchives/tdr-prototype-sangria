@@ -1,0 +1,11 @@
+ALTER TABLE file
+  ALTER COLUMN file_size
+  SET NOT NULL;
+
+ALTER TABLE file
+  ALTER COLUMN last_modified_date
+  SET NOT NULL;
+
+ALTER TABLE file
+  ALTER COLUMN file_name
+  SET NOT NULL;
