@@ -30,7 +30,7 @@ information on how to run them.
 
 ### Prerequisites
 
-Set up a PostreSQL database. One option is to run a [Postgres Docker image][postgres-docker].
+Set up a PostgreSQL database. One option is to run a [Postgres Docker image][postgres-docker].
 
 #### Docker Setup
 
@@ -153,11 +153,20 @@ ECS container.
 To deploy the migrations, `cd` to the migrations folder and run:
 
 ```
-docker build . --tag nationalarchives/tdr-prototype-db-migrations
-docker push nationalarchives/tdr-prototype-db-migrations
+docker build . --tag nationalarchives/tdr-prototype-db-migrations:env-name
+docker push nationalarchives/tdr-prototype-db-migrations:env-name
 ```
 
-In the AWS console, go to the ECS cluster and run the task you defined earlier.
+where `env-name` is a Terraform environment name, e.g. `dev` or `test`.
+
+In the AWS console, go to the ECS cluster and run the task you defined earlier. Configure these settings:
+
+- Set the launch type to "Fargate"
+- Set the VPC to be the same as the one that the database is in - hover over a VPC ID to see its name, e.g.
+  `ecs-vpc-dev`
+- Choose any subnet in the VPC
+- **Set the security group**, and choose the existing security group `migration-task-security-group-<env-name>` that
+  matches the environment you want to migrate
 
 ### Test the deployed API
 
