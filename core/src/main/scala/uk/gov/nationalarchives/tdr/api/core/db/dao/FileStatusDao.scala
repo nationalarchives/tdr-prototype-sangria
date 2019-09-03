@@ -18,8 +18,8 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
 
   private val insert = fileStatuses returning fileStatuses.map(_.id) into ((fileStatus, id) => fileStatus.copy(id = Some(id)))
 
-  def create(fileId: Int): Future[FileStatus] = {
-    val fileStatus = FileStatus(None, false, fileId, "", "", "")
+  def create(fileId: Int, clientSideChecksum: String): Future[FileStatus] = {
+    val fileStatus = FileStatus(None, false, fileId, clientSideChecksum, "", "")
     db.run(insert += fileStatus)
   }
 

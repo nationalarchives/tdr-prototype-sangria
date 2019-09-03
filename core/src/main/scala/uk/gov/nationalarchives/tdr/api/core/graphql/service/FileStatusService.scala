@@ -35,8 +35,8 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
     })
   }
 
-  def create(fileId: Int): Future[FileStatus] = {
-    fileStatusDao.create(fileId)
+  def create(fileId: Int, clientSideChecksum: String): Future[FileStatus] = {
+    fileStatusDao.create(fileId, clientSideChecksum)
       .map(fs => FileStatus(fs.id.get, fs.clientSideChecksum, fs.serverSideChecksum, fs.fileFormatVerified, fs.fileId, fs.antivirusStatus))
   }
 

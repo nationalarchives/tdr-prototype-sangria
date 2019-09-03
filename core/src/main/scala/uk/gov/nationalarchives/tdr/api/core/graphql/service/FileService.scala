@@ -2,7 +2,7 @@ package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
-import uk.gov.nationalarchives.tdr.api.core.db.model.{FileFormat, FileRow}
+import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
 import uk.gov.nationalarchives.tdr.api.core.{CreateFileInput, File}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -13,12 +13,14 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     fileDao.all.flatMap(fileRows => {
       val files = fileRows.map(fileRow =>
         consignmentService.get(fileRow.consignmentId).map(consignment =>
-          core.File(fileRow.id.get, fileRow.path, consignment.get.id, null, null)
+          core.File(fileRow.id.get, fileRow.path, consignment.get.id, null, null, fileRow.fileSize, fileRow.lastModifiedDate,
+            fileRow.fileName)
         )
       )
       Future.sequence(files)
     })
   }
+
 
   def get(id: Int) = {
     for {
@@ -30,11 +32,12 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     } yield core.File(file.id.get, file.path, file.consignmentId,
       core.FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus),
       fileFormat match {
-      case Some(fmt) => fmt.pronomId
-      case None => ""
-    }
+        case Some(fmt) => fmt.pronomId
+        case None => ""
+      }, file.fileSize, file.lastModifiedDate,file.fileName
     )
   }
+
 
   def createMultiple(inputs: Seq[CreateFileInput]): Future[Seq[File]] = {
     //TODO: this should be a sql that adds mutliple rows instead of iterating
@@ -47,17 +50,18 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
   }
 
   def create(input: CreateFileInput): Future[File] = {
-    val newFile = FileRow(None, input.path, input.consignmentId)
+    val newFile = FileRow(None, input.path, input.consignmentId, input.fileSize, input.lastModifiedDate, input.fileName)
     val result = fileDao.create(newFile)
 
     for {
       persistedFile <- result
-      fileStatus <- fileStatusService.create(persistedFile.id.get)
+      fileStatus <- fileStatusService.create(persistedFile.id.get, input.clientSideChecksum)
     } yield
       core.File(persistedFile.id.get, persistedFile.path, input.consignmentId,
         core.FileStatus(fileStatus.id, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus)
-        ,null
+        ,null, persistedFile.fileSize, persistedFile.lastModifiedDate, persistedFile.fileName
       )
+
 
   }
 }
