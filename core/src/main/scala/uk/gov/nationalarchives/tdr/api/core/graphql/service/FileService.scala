@@ -1,5 +1,7 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
+import java.util.UUID
+
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
 import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
 import uk.gov.nationalarchives.tdr.api.core.graphql
@@ -22,7 +24,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
   }
 
 
-  def get(id: Int) = {
+  def get(id: UUID) = {
     for {
       fileOption <- fileDao.get(id)
       file <- fileOption.map(Future.successful).getOrElse(Future.failed(new Exception))
@@ -36,9 +38,8 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     )
   }
 
-
   def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {
-    //TODO: this should be a sql that adds mutliple rows instead of iterating
+    //TODO: this should be a sql that adds multiple rows instead of iterating
     val files = inputs.map(
       input => {
         create(input)
