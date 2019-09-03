@@ -5,6 +5,10 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 lazy val akkaHttpVersion = "10.1.9"
 lazy val akkaVersion    = "2.6.0-M5"
 
+enablePlugins(GraphQLSchemaPlugin)
+
+graphqlSchemaSnippet := "uk.gov.nationalarchives.tdr.api.core.graphql.GraphQlTypes.schema"
+
 lazy val core = (project in file("core"))
   .settings(
     name := "TDR GraphQL API core",
@@ -17,7 +21,7 @@ lazy val core = (project in file("core"))
       "com.typesafe.slick" %% "slick-hikaricp" % "3.3.1",
       "org.postgresql" % "postgresql" % "42.2.6",
       "software.amazon.awssdk" % "ssm" % "2.7.23",
-      "io.circe" %% "circe-generic" % "0.9.3",      
+      "io.circe" %% "circe-generic" % "0.9.3",
     )
   )
 
@@ -56,3 +60,5 @@ lazy val root = (project in file("."))
       "org.scalatest"     %% "scalatest"            % "3.0.5"         % Test,
     )
   ).dependsOn(core)
+
+mainClass in (Compile, run) := Some("uk.gov.nationalarchives.tdr.api.httpserver.ApiServer")

@@ -1,7 +1,7 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.SeriesDao
-import uk.gov.nationalarchives.tdr.api.core.Series
+import uk.gov.nationalarchives.tdr.api.core.graphql.Series
 
 import scala.concurrent.{ExecutionContext, Future}
 
