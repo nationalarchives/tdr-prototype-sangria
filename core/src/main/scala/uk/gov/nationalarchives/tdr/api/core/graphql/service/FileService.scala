@@ -31,10 +31,8 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       fileFormat <- fileFormatService.getByFileId(file.id.get)
     } yield core.File(file.id.get, file.path, file.consignmentId,
       core.FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus),
-      fileFormat match {
-        case Some(fmt) => fmt.pronomId
-        case None => ""
-      }, file.fileSize, file.lastModifiedDate,file.fileName
+      fileFormat.map(_.pronomId)
+      , file.fileSize, file.lastModifiedDate,file.fileName
     )
   }
 
