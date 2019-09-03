@@ -86,6 +86,20 @@ environment variables as in the CLI option above.
 Both options will start a server at http://localhost:8080/. It currently just provides a GraphQL POST endpoint at
 http://127.0.0.1:8080/graphql, which you can send queries to with curl, Postman or a GraphQL client.
 
+### Generate GraphQL schema
+
+To generate a schema from the Sangria code to use in Postman or a client application, run:
+
+```
+sbt graphqlSchemaGen
+```
+
+This will output a schema file to `target/sbt-graphql/schema.graphql`.
+
+To use the schema in Postman, see the [Postman guide to importing GraphQL schemas][postman-import-graphql].
+
+[postman-import-graphql]: https://learning.getpostman.com/docs/postman/sending_api_requests/graphql/#importing-graphql-schemas
+
 ## Deployment
 
 ### Infrastructure
