@@ -28,6 +28,10 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
     db.run(fileStatuses.filter(_.id === id).result).map(_.headOption)
   }
 
+  def getByFileId(fileId: Int): Future[Option[FileStatus]] = {
+    db.run(fileStatuses.filter(_.fileId === fileId).result).map(_.headOption)
+  }
+
   def updateServerSideChecksum(id: Int, checksum: String) = {
     val q = for { c <- fileStatuses if c.fileId === id } yield c.serverSideChecksum
     val updateAction = q.update(checksum)

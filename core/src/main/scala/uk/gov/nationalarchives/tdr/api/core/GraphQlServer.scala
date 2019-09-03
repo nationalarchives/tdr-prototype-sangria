@@ -18,8 +18,8 @@ object GraphQlServer {
   private val seriesService = new SeriesService(new SeriesDao)
   private val consignmentService = new ConsignmentService(new ConsignmentDao, seriesService)
   private val fileStatusService = new FileStatusService(new FileStatusDao())
-  private val fileService = new FileService(new FileDao, fileStatusService, consignmentService)
   private val fileFormatService = new FileFormatService(new FileFormatDao())
+  private val fileService = new FileService(new FileDao, fileStatusService, consignmentService, fileFormatService)
   private val requestContext = new RequestContext(seriesService, consignmentService, fileService, fileStatusService, fileFormatService)
 
   def send(request: GraphQlRequest): Future[Json] = {

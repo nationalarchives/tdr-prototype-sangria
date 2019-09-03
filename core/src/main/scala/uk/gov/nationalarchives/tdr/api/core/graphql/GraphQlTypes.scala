@@ -10,6 +10,7 @@ object GraphQlTypes {
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
   implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
+  implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType: InputObjectType[CreateFileInput] = deriveInputObjectType[CreateFileInput]()
 
   private val ConsignmentNameArg = Argument("name", StringType)
@@ -95,5 +96,6 @@ case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: Int, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
-case class File(id: Int, path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: String, fileName: String)
+case class File(id: Int, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: String, fileName: String)
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: String, fileName: String, clientSideChecksum: String)
+

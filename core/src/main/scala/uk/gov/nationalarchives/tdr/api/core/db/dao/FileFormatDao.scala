@@ -3,7 +3,7 @@ package uk.gov.nationalarchives.tdr.api.core.db.dao
 import slick.lifted.Tag
 import slick.jdbc.PostgresProfile.api._
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
-import uk.gov.nationalarchives.tdr.api.core.db.model.FileFormat
+import uk.gov.nationalarchives.tdr.api.core.db.model.{FileFormat, FileRow}
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileFormatDao.fileFormats
 
@@ -14,9 +14,23 @@ class FileFormatDao(implicit val executionContext: ExecutionContext) {
 
   private val insertQuery = fileFormats returning fileFormats.map(_.id) into ((fileFormat, id) => fileFormat.copy(id = Some(id)))
 
-  def create(pronomId: String, fileId: Int): Future[FileFormat] = {
-    val fileFormat: FileFormat = FileFormat(null, pronomId, fileId)
-    db.run(insertQuery += fileFormat)
+
+  def getByFileId(fileId: Int): Future[Option[FileFormat]] = {
+    db.run(fileFormats.filter(_.fileId === fileId).result).map(_.headOption)
+  }
+
+  def createOrUpdate(pronomId: String, fileId: Int) = {
+    getByFileId(fileId).map(fileFormat => {
+      if(fileFormat.isEmpty) {
+        val fileFormat: FileFormat = FileFormat(null, pronomId, fileId)
+        db.run(insertQuery += fileFormat)
+      } else {
+        val q = for { c <- fileFormats if c.fileId === fileId } yield c.pronomId
+        val updateAction = q.update(pronomId)
+        db.run(updateAction)
+      }
+    })
+
   }
 }
 

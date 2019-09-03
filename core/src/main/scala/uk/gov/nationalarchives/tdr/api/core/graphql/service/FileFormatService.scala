@@ -7,8 +7,11 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileFormatService(fileFormatDao: FileFormatDao)(implicit val executionContext: ExecutionContext) {
 
   def create(pronomId: String, fileId: Int): Future[Boolean] = {
-    fileFormatDao.create(pronomId, fileId)
-      .map(_ => true)
+    fileFormatDao.createOrUpdate(pronomId, fileId).map(_ => true)
+  }
+
+  def getByFileId(fileId: Int) = {
+    fileFormatDao.getByFileId(fileId)
   }
 
 }
