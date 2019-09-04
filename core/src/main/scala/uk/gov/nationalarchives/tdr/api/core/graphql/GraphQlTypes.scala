@@ -1,12 +1,13 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql
 
-import java.util.UUID
+import java.util.{Date, UUID}
 
 import io.circe.generic.auto._
 import sangria.ast.StringValue
 import sangria.macros.derive._
+import sangria.marshalling.{CoercedScalaResultMarshaller, FromInput}
 import sangria.marshalling.circe._
-import sangria.schema.{Argument, BooleanType, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
+import sangria.schema.{Argument, BooleanType, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarAlias, ScalarType, Schema, StringType, fields}
 import sangria.validation.ValueCoercionViolation
 
 import scala.util.{Failure, Success, Try}
@@ -14,6 +15,7 @@ import scala.util.{Failure, Success, Try}
 object GraphQlTypes {
 
   private case object UuidCoercionViolation extends ValueCoercionViolation("Valid UUID expected")
+  private case object DateCoercionViolation extends ValueCoercionViolation("Date value expected")
 
   private def parseUuid(s: String): Either[ValueCoercionViolation, UUID] = Try(UUID.fromString(s)) match {
     case Success(uuid) => Right(uuid)
@@ -32,9 +34,50 @@ object GraphQlTypes {
     }
   )
 
+  implicit private val CreateFileInputFromInput = new FromInput[CreateFileInput] {
+    val marshaller = CoercedScalaResultMarshaller.default
+    def fromResult(node: marshaller.Node) = {
+      val ad = node.asInstanceOf[Map[String, Any]]
+
+      CreateFileInput(
+        lastModifiedDate = ad("lastModifiedDate").asInstanceOf[Date],
+        consignmentId = ad("consignmentId").asInstanceOf[Int],
+        path = ad("path").asInstanceOf[String],
+        fileSize = ad("fileSize").asInstanceOf[Int],
+        fileName = ad("fileName").asInstanceOf[String],
+        clientSideChecksum = ad("clientSideChecksum").asInstanceOf[String]
+      )
+    }
+  }
+
+  private def parseDate(s: String) = Try(new Date(s.toLong)) match {
+    case Success(date) ⇒ Right(date)
+    case Failure(_) ⇒ Left(DateCoercionViolation)
+  }
+
+  implicit private val DateType = ScalarType[Date](
+    "DateTime",
+    coerceOutput = (dt, _) => dt.toString,
+    coerceUserInput = {
+      case s: String => parseDate(s)
+      case _ => Left(DateCoercionViolation)
+    },
+    coerceInput = {
+      case StringValue(s, _, _, _, _) => parseDate(s)
+      case _ => Left(DateCoercionViolation)
+    }
+  )
+
+  /* implicit val TimestampType = ScalarAlias[String, Date](DateType,
+    toScalar = date => parseDate(s)
+    fromScala =
+  )*/
+
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
-  implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
+  implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File](
+    //ReplaceField("lastModifiedDate", Field("lastModifiedDate", DateType, resolve = _.value.lastModifiedDate))
+  )
   implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType: InputObjectType[CreateFileInput] = deriveInputObjectType[CreateFileInput]()
 
@@ -121,6 +164,6 @@ case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
-case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: String, fileName: String)
-case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: String, fileName: String, clientSideChecksum: String)
+case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Date, fileName: String)
+case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Date, fileName: String, clientSideChecksum: String)
 
