@@ -68,16 +68,9 @@ object GraphQlTypes {
     }
   )
 
-  /* implicit val TimestampType = ScalarAlias[String, Date](DateType,
-    toScalar = date => parseDate(s)
-    fromScala =
-  )*/
-
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
-  implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File](
-    //ReplaceField("lastModifiedDate", Field("lastModifiedDate", DateType, resolve = _.value.lastModifiedDate))
-  )
+  implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
   implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType: InputObjectType[CreateFileInput] = deriveInputObjectType[CreateFileInput]()
 

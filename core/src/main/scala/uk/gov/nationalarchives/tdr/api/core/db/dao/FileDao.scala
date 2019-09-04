@@ -13,8 +13,6 @@ import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileDao(implicit val executionContext: ExecutionContext) {
-
-
   private val db = DbConnection.db
 
   private val insertQuery = files returning files.map(_.id) into ((file, id) => file.copy(id = Some(id)))
