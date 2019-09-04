@@ -1,4 +1,6 @@
 package uk.gov.nationalarchives.tdr.api.core.db.model
 
-case class FileFormat(id: Option[Int], pronomId: String, fileId: Int)
+import java.util.UUID
+
+case class FileFormat(id: Option[Int], pronomId: String, fileId: UUID)
 

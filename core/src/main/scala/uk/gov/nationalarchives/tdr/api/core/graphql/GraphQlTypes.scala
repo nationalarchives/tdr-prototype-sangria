@@ -1,11 +1,36 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql
 
-import sangria.marshalling.circe._
+import java.util.UUID
+
 import io.circe.generic.auto._
+import sangria.ast.StringValue
 import sangria.macros.derive._
-import sangria.schema.{Argument, BooleanType, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, Schema, StringType, fields}
+import sangria.marshalling.circe._
+import sangria.schema.{Argument, BooleanType, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
+import sangria.validation.ValueCoercionViolation
+
+import scala.util.{Failure, Success, Try}
 
 object GraphQlTypes {
+
+  private case object UuidCoercionViolation extends ValueCoercionViolation("Valid UUID expected")
+
+  private def parseUuid(s: String): Either[ValueCoercionViolation, UUID] = Try(UUID.fromString(s)) match {
+    case Success(uuid) => Right(uuid)
+    case Failure(_) => Left(UuidCoercionViolation)
+  }
+
+  implicit private val UuidType: ScalarType[UUID] = ScalarType[UUID]("UUID",
+    coerceOutput = (u, _) => u.toString,
+    coerceUserInput = {
+      case s: String => parseUuid(s)
+      case _ => Left(UuidCoercionViolation)
+    },
+    coerceInput = {
+      case StringValue(s, _, _, _, _) => parseUuid(s)
+      case _ => Left(UuidCoercionViolation)
+    }
+  )
 
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
@@ -16,7 +41,7 @@ object GraphQlTypes {
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
   private val SeriesIdArg = Argument("seriesId", IntType)
-  private val FileIdArg = Argument("id", IntType)
+  private val FileIdArg = Argument("id", UuidType)
   private val ChecksumArg = Argument("checksum", StringType)
   private val VirusCheckStatusArg = Argument("status", StringType)
   private val PronomIdArg = Argument("pronomId", StringType)
@@ -94,8 +119,8 @@ object GraphQlTypes {
 
 case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
-case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: Int, antivirusStatus: String)
+case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
-case class File(id: Int, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: String, fileName: String)
+case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: String, fileName: String)
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: String, fileName: String, clientSideChecksum: String)
 

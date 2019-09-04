@@ -1,5 +1,7 @@
 package uk.gov.nationalarchives.tdr.api.core.db.dao
 
+import java.util.UUID
+
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Tag
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
@@ -18,7 +20,7 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
 
   private val insert = fileStatuses returning fileStatuses.map(_.id) into ((fileStatus, id) => fileStatus.copy(id = Some(id)))
 
-  def create(fileId: Int, clientSideChecksum: String): Future[FileStatus] = {
+  def create(fileId: UUID, clientSideChecksum: String): Future[FileStatus] = {
     val fileStatus = FileStatus(None, false, fileId, clientSideChecksum, "", "")
     db.run(insert += fileStatus)
   }
@@ -28,24 +30,24 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
     db.run(fileStatuses.filter(_.id === id).result).map(_.headOption)
   }
 
-  def getByFileId(fileId: Int): Future[Option[FileStatus]] = {
+  def getByFileId(fileId: UUID): Future[Option[FileStatus]] = {
     db.run(fileStatuses.filter(_.fileId === fileId).result).map(_.headOption)
   }
 
-  def updateServerSideChecksum(id: Int, checksum: String) = {
-    val q = for { c <- fileStatuses if c.fileId === id } yield c.serverSideChecksum
+  def updateServerSideChecksum(fileId: UUID, checksum: String) = {
+    val q = for { c <- fileStatuses if c.fileId === fileId } yield c.serverSideChecksum
     val updateAction = q.update(checksum)
     db.run(updateAction)
   }
 
-  def updateClientSideChecksum(id: Int, checksum: String) = {
-    val q = for { c <- fileStatuses if c.fileId === id } yield c.clientSideChecksum
+  def updateClientSideChecksum(fileId: UUID, checksum: String) = {
+    val q = for { c <- fileStatuses if c.fileId === fileId } yield c.clientSideChecksum
     val updateAction = q.update(checksum)
     db.run(updateAction)
   }
 
-  def updateVirusCheckStatus(id: Int, virusCheckStatus: String) = {
-    val q = for { c <- fileStatuses if c.fileId === id } yield c.antivirus_status
+  def updateVirusCheckStatus(fileId: UUID, virusCheckStatus: String) = {
+    val q = for { c <- fileStatuses if c.fileId === fileId } yield c.antivirus_status
     val updateAction = q.update(virusCheckStatus)
     db.run(updateAction)
   }
@@ -58,7 +60,7 @@ object FileStatusDao {
 class FileStatusTable(tag: Tag) extends Table[FileStatus](tag, "file_status") {
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
   def fileFormatVerified = column[Boolean]("file_format_verified")
-  def fileId = column[Int]("file_id")
+  def fileId = column[UUID]("file_id")
   def clientSideChecksum = column[String]("client_side_checksum")
   def serverSideChecksum = column[String]("server_side_checksum")
   def antivirus_status = column[String]("antivirus_status")

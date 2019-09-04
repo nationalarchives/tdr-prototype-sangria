@@ -1,13 +1,13 @@
 package uk.gov.nationalarchives.tdr.api.core.db.dao
 
-import java.util.Date
+import java.util.UUID
 
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{TableQuery, Tag}
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
+import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
-import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -20,7 +20,7 @@ class FileDao(implicit val executionContext: ExecutionContext) {
     db.run(files.result)
   }
 
-  def get(id: Int): Future[Option[FileRow]] = {
+  def get(id: UUID): Future[Option[FileRow]] = {
     db.run(files.filter(_.id === id).result).map(_.headOption)
   }
 
@@ -35,7 +35,7 @@ object FileDao {
 }
 
 class FileTable(tag: Tag) extends Table[FileRow](tag, "file") {
-  def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+  def id = column[UUID]("id", O.PrimaryKey, O.AutoInc)
   def path = column[String]("path")
   def consignmentId = column[Int]("consignment_id")
   def fileSize = column[Int]("file_size")
