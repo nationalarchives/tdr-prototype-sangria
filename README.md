@@ -222,7 +222,7 @@ mutation {
 ### "```GetFile```"
 ```
 { 
-    getFile(id: 1) {
+    getFile(id: "some-file-id-uuid") {
         path,
         id,
         consignmentId,
