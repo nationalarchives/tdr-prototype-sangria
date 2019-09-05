@@ -49,5 +49,7 @@ class FileTable(tag: Tag) extends Table[FileRow](tag, "file") {
   def fileName = column[String]("file_name")
   def consignment = foreignKey("file_consignment_fk", consignmentId, consignments)(_.id)
 
+  //mapTo function displaying error in Intellij but not causing any problems with compilation and running
+  //Likely a bug with Intellij error detection
   override def * = (id.?, path, consignmentId, fileSize, lastModifiedDate, fileName).mapTo[FileRow]
 }
