@@ -1,7 +1,8 @@
 package uk.gov.nationalarchives.tdr.api.core.db.dao
 
 import java.sql.Timestamp
-import java.util.{Date, UUID}
+import java.time.LocalDateTime
+import java.util.UUID
 
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{TableQuery, Tag}
@@ -28,7 +29,6 @@ class FileDao(implicit val executionContext: ExecutionContext) {
   def create(file: FileRow): Future[FileRow] = {
     db.run(insertQuery += file)
   }
-
 }
 
 object FileDao {
@@ -36,16 +36,16 @@ object FileDao {
 }
 
 class FileTable(tag: Tag) extends Table[FileRow](tag, "file") {
-  implicit private val dateColumnType = MappedColumnType.base[Date, Timestamp](
-    d => new Timestamp(d.getTime),
-    ts => new Date(ts.getTime)
+  implicit private val dateColumnType = MappedColumnType.base[LocalDateTime, Timestamp](
+    ldt => Timestamp.valueOf(ldt),
+    ts => ts.toLocalDateTime
   )
 
   def id = column[UUID]("id", O.PrimaryKey, O.AutoInc)
   def path = column[String]("path")
   def consignmentId = column[Int]("consignment_id")
   def fileSize = column[Int]("file_size")
-  def lastModifiedDate = column[Date]("last_modified_date")
+  def lastModifiedDate = column[LocalDateTime]("last_modified_date")
   def fileName = column[String]("file_name")
   def consignment = foreignKey("file_consignment_fk", consignmentId, consignments)(_.id)
 

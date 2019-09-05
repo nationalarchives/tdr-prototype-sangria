@@ -1,13 +1,15 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql
 
-import java.util.{Date, UUID}
+import java.time._
+import java.util.UUID
 
+import cats.syntax.either._
+import io.circe.Decoder
 import io.circe.generic.auto._
 import sangria.ast.StringValue
 import sangria.macros.derive._
-import sangria.marshalling.{CoercedScalaResultMarshaller, FromInput}
 import sangria.marshalling.circe._
-import sangria.schema.{Argument, BooleanType, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarAlias, ScalarType, Schema, StringType, fields}
+import sangria.schema.{Argument, BooleanType, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
 import sangria.validation.ValueCoercionViolation
 
 import scala.util.{Failure, Success, Try}
@@ -34,30 +36,19 @@ object GraphQlTypes {
     }
   )
 
-  implicit private val CreateFileInputFromInput = new FromInput[CreateFileInput] {
-    val marshaller = CoercedScalaResultMarshaller.default
-    def fromResult(node: marshaller.Node) = {
-      val ad = node.asInstanceOf[Map[String, Any]]
+  implicit private val localDateTimeDecoder: Decoder[LocalDateTime] = Decoder.decodeString.emap(str =>
+    Either.catchNonFatal(LocalDateTime.parse(str)).leftMap(t => "LocalDateTime")
+  )
 
-      CreateFileInput(
-        lastModifiedDate = ad("lastModifiedDate").asInstanceOf[Date],
-        consignmentId = ad("consignmentId").asInstanceOf[Int],
-        path = ad("path").asInstanceOf[String],
-        fileSize = ad("fileSize").asInstanceOf[Int],
-        fileName = ad("fileName").asInstanceOf[String],
-        clientSideChecksum = ad("clientSideChecksum").asInstanceOf[String]
-      )
-    }
-  }
-
-  private def parseDate(s: String) = Try(new Date(s.toLong)) match {
+  private def parseDate(s: String) = Try(
+    LocalDateTime.ofInstant(Instant.ofEpochMilli(s.toLong), ZoneId.systemDefault())) match {
     case Success(date) ⇒ Right(date)
     case Failure(_) ⇒ Left(DateCoercionViolation)
   }
 
-  implicit private val DateType = ScalarType[Date](
-    "DateTime",
-    coerceOutput = (dt, _) => dt.toString,
+  implicit private val DateType = ScalarType[LocalDateTime](
+    "LocalDateTime",
+    coerceOutput = (ldt, _) => ldt.toString,
     coerceUserInput = {
       case s: String => parseDate(s)
       case _ => Left(DateCoercionViolation)
@@ -157,6 +148,6 @@ case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
-case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Date, fileName: String)
-case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Date, fileName: String, clientSideChecksum: String)
+case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: LocalDateTime, fileName: String)
+case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: LocalDateTime, fileName: String, clientSideChecksum: String)
 
