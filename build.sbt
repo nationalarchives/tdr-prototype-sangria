@@ -46,6 +46,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "TDR GraphQL akka-http API",
     assemblyJarName in assembly := "tdr-api.jar",
+    mainClass in assembly := Some("uk.gov.nationalarchives.tdr.api.httpserver.ApiServer"),
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http"            % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
@@ -58,7 +59,13 @@ lazy val root = (project in file("."))
       "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,
       "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion     % Test,
       "org.scalatest"     %% "scalatest"            % "3.0.5"         % Test,
-    )
+    ),
+ assemblyMergeStrategy in assembly := {
+        case x if x.contains("io.netty.versions.properties") => MergeStrategy.discard
+        case x =>
+          val oldStrategy = (assemblyMergeStrategy in assembly).value
+          oldStrategy(x)
+  }
   ).dependsOn(core)
 
 mainClass in (Compile, run) := Some("uk.gov.nationalarchives.tdr.api.httpserver.ApiServer")
