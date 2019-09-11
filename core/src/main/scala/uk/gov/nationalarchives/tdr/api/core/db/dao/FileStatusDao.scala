@@ -37,27 +37,26 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
     db.run(fileStatuses.filter(_.fileId === fileId).result).map(_.headOption)
   }
 
-  case class FileCheck(clientChecksum: String, serverChecksum: String, virusStatus: String, pronomId: String)
+  case class FileCheck(clientChecksum: String, serverChecksum: String, virusStatus: String, pronomId: Option[String])
 
   case class FileStatusCount(virusCount: Int, fileFormatCount: Int, checksumCount: Int, error: Boolean)
 
   def getFileCheckStatus(consignmentId: Int) = {
     val query = for {
-      c <- consignments
-      f <- files if c.id === f.consignmentId
-      fs <- fileStatuses if f.id === fs.fileId
-      ff <- fileFormats if ff.fileId === f.id
-    } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.pronomId)
+      (c, f) <- consignments join files on (_.id === _.consignmentId)
+      (f, fs) <- files join fileStatuses on (_.id === _.fileId)
+      (fs, ff) <- fileStatuses joinLeft fileFormats on (_.fileId === _.fileId)
+    } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.map(_.pronomId))
 
     implicit def boolToInt(b: Boolean): Int = if (b) 1 else 0
 
-    val result: Future[Seq[(String, String, String, String)]] = db.run(query.result)
+    val result: Future[Seq[(String, String, String, Option[String])]] = db.run(query.result)
     val checkList: Future[Seq[FileCheck]] = result.map(_.map(f => FileCheck(f._1, f._2, f._3, f._4)))
 
     val fn: (FileStatusCount, FileCheck) => FileStatusCount = (acc, s) => {
       val checksumCount = acc.checksumCount + (s.serverChecksum.length > 0 && s.serverChecksum == s.clientChecksum)
       val virusCount: Int = acc.virusCount + s.virusStatus.length
-      val fileFormatCount: Int = acc.fileFormatCount + s.pronomId.length
+      val fileFormatCount: Int = acc.fileFormatCount + s.pronomId.getOrElse("").length
       val error = acc.error || s.virusStatus != "OK"
       FileStatusCount(virusCount, checksumCount, fileFormatCount, error)
     }

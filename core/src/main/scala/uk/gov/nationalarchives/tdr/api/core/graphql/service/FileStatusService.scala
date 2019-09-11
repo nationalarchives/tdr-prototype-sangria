@@ -19,7 +19,7 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
   }
 
   def getFileCheckStatus(consignmentId: Int): Future[FileCheckStatus] = {
-    Future.apply(FileCheckStatus(0,0,0, true))
+    fileStatusDao.getFileCheckStatus(consignmentId)
 
   }
 
