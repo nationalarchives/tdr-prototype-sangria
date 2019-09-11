@@ -4,7 +4,7 @@ import java.util.UUID
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileStatusDao
 import uk.gov.nationalarchives.tdr.api.core.db.model
-import uk.gov.nationalarchives.tdr.api.core.graphql.FileStatus
+import uk.gov.nationalarchives.tdr.api.core.graphql.{FileCheckStatus, FileStatus}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -16,6 +16,11 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
       }
       true
     })
+  }
+
+  def getFileCheckStatus(consignmentId: Int): Future[FileCheckStatus] = {
+    Future.apply(FileCheckStatus(0,0,0, true))
+
   }
 
   def updateClientSideChecksum(fileId: UUID, checksum: String): Future[Boolean] = {

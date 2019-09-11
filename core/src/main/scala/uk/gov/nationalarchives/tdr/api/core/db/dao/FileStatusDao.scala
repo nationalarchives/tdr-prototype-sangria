@@ -8,6 +8,9 @@ import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
 import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatus}
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileStatusDao.fileStatuses
+import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
+import uk.gov.nationalarchives.tdr.api.core.db.dao.FileFormatDao.fileFormats
+import uk.gov.nationalarchives.tdr.api.core.graphql.FileCheckStatus
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,20 +37,56 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
     db.run(fileStatuses.filter(_.fileId === fileId).result).map(_.headOption)
   }
 
+  case class FileCheck(clientChecksum: String, serverChecksum: String, virusStatus: String, pronomId: String)
+
+  case class FileStatusCount(virusCount: Int, fileFormatCount: Int, checksumCount: Int, error: Boolean)
+
+  def getFileCheckStatus(consignmentId: Int) = {
+    val query = for {
+      c <- consignments
+      f <- files if c.id === f.consignmentId
+      fs <- fileStatuses if f.id === fs.fileId
+      ff <- fileFormats if ff.fileId === f.id
+    } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.pronomId)
+
+    implicit def boolToInt(b: Boolean): Int = if (b) 1 else 0
+
+    val result: Future[Seq[(String, String, String, String)]] = db.run(query.result)
+    val checkList: Future[Seq[FileCheck]] = result.map(_.map(f => FileCheck(f._1, f._2, f._3, f._4)))
+
+    val fn: (FileStatusCount, FileCheck) => FileStatusCount = (acc, s) => {
+      val checksumCount = acc.checksumCount + (s.serverChecksum.length > 0 && s.serverChecksum == s.clientChecksum)
+      val virusCount: Int = acc.virusCount + s.virusStatus.length
+      val fileFormatCount: Int = acc.fileFormatCount + s.pronomId.length
+      val error = acc.error || s.virusStatus != "OK"
+      FileStatusCount(virusCount, checksumCount, fileFormatCount, error)
+    }
+    val results: Future[FileStatusCount] = checkList.map(_.foldLeft(FileStatusCount(0, 0, 0, false))(fn))
+
+    for {
+      r <- result
+      fsc <- results
+    } yield {
+      val percent: (Int) => Int = cnt => Math.floor(cnt/r.length * 100).intValue()
+      FileCheckStatus(percent(fsc.virusCount), percent(fsc.fileFormatCount), percent(fsc.checksumCount), fsc.error)
+    }
+
+  }
+
   def updateServerSideChecksum(fileId: UUID, checksum: String) = {
-    val q = for { c <- fileStatuses if c.fileId === fileId } yield c.serverSideChecksum
+    val q = for {c <- fileStatuses if c.fileId === fileId} yield c.serverSideChecksum
     val updateAction = q.update(checksum)
     db.run(updateAction)
   }
 
   def updateClientSideChecksum(fileId: UUID, checksum: String) = {
-    val q = for { c <- fileStatuses if c.fileId === fileId } yield c.clientSideChecksum
+    val q = for {c <- fileStatuses if c.fileId === fileId} yield c.clientSideChecksum
     val updateAction = q.update(checksum)
     db.run(updateAction)
   }
 
   def updateVirusCheckStatus(fileId: UUID, virusCheckStatus: String) = {
-    val q = for { c <- fileStatuses if c.fileId === fileId } yield c.antivirus_status
+    val q = for {c <- fileStatuses if c.fileId === fileId} yield c.antivirus_status
     val updateAction = q.update(virusCheckStatus)
     db.run(updateAction)
   }
