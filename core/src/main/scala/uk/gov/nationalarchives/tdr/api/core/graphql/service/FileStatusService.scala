@@ -20,7 +20,6 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
 
   def getFileCheckStatus(consignmentId: Int): Future[FileCheckStatus] = {
     fileStatusDao.getFileCheckStatus(consignmentId)
-
   }
 
   def updateClientSideChecksum(fileId: UUID, checksum: String): Future[Boolean] = {
