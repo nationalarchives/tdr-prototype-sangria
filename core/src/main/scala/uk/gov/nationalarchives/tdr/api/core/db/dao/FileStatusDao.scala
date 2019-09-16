@@ -2,12 +2,15 @@ package uk.gov.nationalarchives.tdr.api.core.db.dao
 
 import java.util.UUID
 
+import slick.dbio.Effect
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Tag
+import slick.sql.FixedSqlAction
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
 import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatus}
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileStatusDao.fileStatuses
+import uk.gov.nationalarchives.tdr.api.core.graphql.CreateFileInput
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -25,6 +28,9 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
     db.run(insert += fileStatus)
   }
 
+  def createMultiple(fileStatusRows: Seq[FileStatus]): Future[Seq[FileStatus]] = {
+    db.run(insert ++= fileStatusRows)
+  }
 
   def get(id: Int): Future[Option[FileStatus]] = {
     db.run(fileStatuses.filter(_.id === id).result).map(_.headOption)

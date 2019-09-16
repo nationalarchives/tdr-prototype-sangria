@@ -8,6 +8,7 @@ import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
 import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
+import uk.gov.nationalarchives.tdr.api.core.graphql.CreateFileInput
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,6 +29,10 @@ class FileDao(implicit val executionContext: ExecutionContext) {
     db.run(insertQuery += file)
   }
 
+  def createMultiple(inputs: Seq[CreateFileInput]): Future[Seq[FileRow]] = {
+    val fileRows: Seq[FileRow] = inputs.map(i => FileRow(None, i.path, i.consignmentId, i.fileSize, i.lastModifiedDate, i.fileName))
+    db.run(insertQuery ++= fileRows)
+  }
 }
 
 object FileDao {

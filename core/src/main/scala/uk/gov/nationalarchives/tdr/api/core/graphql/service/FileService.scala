@@ -3,9 +3,10 @@ package uk.gov.nationalarchives.tdr.api.core.graphql.service
 import java.util.UUID
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
+import uk.gov.nationalarchives.tdr.api.core.db.model
 import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
 import uk.gov.nationalarchives.tdr.api.core.graphql
-import uk.gov.nationalarchives.tdr.api.core.graphql.{File, FileStatus}
+import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, File, FileStatus}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -39,13 +40,31 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
   }
 
   def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {
-    //TODO: this should be a sql that adds multiple rows instead of iterating
-    val files = inputs.map(
-      input => {
-        create(input)
+    val pathToInput: Map[String, CreateFileInput] = inputs.groupBy(_.path).mapValues(_.head)
+
+    for {
+      result <- fileDao.createMultiple(inputs)
+      fileStatuses <- fileStatusService.createMutiple(pathToInput, result)
+    } yield {
+
+      val fileIdToStatus: Map[UUID, model.FileStatus] = fileStatuses.groupBy(_.fileId).mapValues(_.head)
+      result.map(r => {
+        val fileStatus: model.FileStatus = fileIdToStatus(r.id.get)
+        getFileReturnValue(r, fileStatus)
       }
-    )
-    Future.sequence(files)
+      )
+    }
+  }
+
+  private def getFileReturnValue(r: FileRow, fileStatus: model.FileStatus) = {
+    val returnFileStatus = FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, r.id.get, fileStatus.antivirusStatus)
+    File(r.id.get,
+      r.path,
+      r.consignmentId,
+      returnFileStatus,
+      Option.apply(""),
+      r.fileSize,
+      r.lastModifiedDate, r.fileName)
   }
 
   def create(input: graphql.CreateFileInput): Future[File] = {
@@ -56,10 +75,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       persistedFile <- result
       fileStatus <- fileStatusService.create(persistedFile.id.get, input.clientSideChecksum)
     } yield
-      File(persistedFile.id.get, persistedFile.path, input.consignmentId,
-        FileStatus(fileStatus.id, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus)
-        , null, persistedFile.fileSize, persistedFile.lastModifiedDate, persistedFile.fileName
-      )
+      getFileReturnValue(persistedFile, fileStatus)
 
 
   }
