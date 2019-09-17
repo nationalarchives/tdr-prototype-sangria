@@ -60,6 +60,7 @@ object GraphQlTypes {
   )
 
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
+  implicit private val CreateSeriesInputType: InputObjectType[CreateSeriesInput] = deriveInputObjectType[CreateSeriesInput]()
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
   implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
   implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
@@ -68,6 +69,9 @@ object GraphQlTypes {
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
   private val SeriesIdArg = Argument("seriesId", IntType)
+  private val SeriesNameArg = Argument("name", StringType)
+  private val SeriesDescriptionArg = Argument("description", StringType)
+  private val SeriesInputArg = Argument("createSeriesInput", CreateSeriesInputType)
   private val FileIdArg = Argument("id", UuidType)
   private val ChecksumArg = Argument("checksum", StringType)
   private val VirusCheckStatusArg = Argument("status", StringType)
@@ -76,6 +80,10 @@ object GraphQlTypes {
   private val MultipleFileInputsArg = Argument("createFileInputs", ListInputType(CreateFileInputType))
 
   private val QueryType = ObjectType("Query", fields[RequestContext, Unit](
+    Field(
+      "getAllSeries",
+      ListType(SeriesType),
+      resolve = ctx => ctx.ctx.series.all),
     Field(
       "getConsignments",
       ListType(ConsignmentType),
@@ -99,6 +107,12 @@ object GraphQlTypes {
   ))
 
   private val MutationType = ObjectType("Mutation", fields[RequestContext, Unit](
+    Field(
+      "createSeries",
+      SeriesType,
+      arguments = List(SeriesInputArg),
+      resolve = ctx => ctx.ctx.series.create(ctx.arg(SeriesInputArg))
+    ),
     Field(
       "createConsignment",
       ConsignmentType,
@@ -145,6 +159,7 @@ object GraphQlTypes {
 }
 
 case class Series(id: Int, name: String, description: String)
+case class CreateSeriesInput(name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
