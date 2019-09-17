@@ -64,6 +64,7 @@ object GraphQlTypes {
   implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
   implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType: InputObjectType[CreateFileInput] = deriveInputObjectType[CreateFileInput]()
+  implicit private val FileCheckStatusType: ObjectType[Unit, FileCheckStatus] = deriveObjectType[Unit, FileCheckStatus]()
 
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
@@ -95,7 +96,14 @@ object GraphQlTypes {
     Field(
       "getFiles",
       ListType(FileType),
-      resolve = ctx => ctx.ctx.files.all)
+      resolve = ctx => ctx.ctx.files.all),
+    Field(
+      "getFileChecksStatus",
+      FileCheckStatusType,
+      arguments = List(ConsignmentIdArg),
+      resolve = ctx => ctx.ctx.fileStatuses.getFileCheckStatus(ctx.arg(ConsignmentIdArg))
+    )
+
   ))
 
   private val MutationType = ObjectType("Mutation", fields[RequestContext, Unit](
@@ -148,6 +156,9 @@ case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
+
 case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Instant, fileName: String)
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
+case class FileCheckStatus(virusPercentage: Int, fileFormatPercentage: Int, checksumPercentage: Int, error: Boolean)
+
 
