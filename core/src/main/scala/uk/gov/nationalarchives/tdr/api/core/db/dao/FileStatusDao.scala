@@ -42,38 +42,34 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
 
   case class FileCheck(clientChecksum: String, serverChecksum: String, virusStatus: String, pronomId: Option[String])
 
-  case class FileStatusCount(virusCount: Int, fileFormatCount: Int, checksumCount: Int, error: Boolean)
+  case class FileStatusCount(completeCount: Int, error: Boolean)
 
   def getFileCheckStatus(consignmentId: Int) = {
     val query = for {
-      (_, _) <- consignments join files on (_.id === _.consignmentId)
-      (_, _) <- files join fileStatuses on (_.id === _.fileId)
-      (fs, ff) <- fileStatuses joinLeft fileFormats on (_.fileId === _.fileId)
+      ((c, fs), ff) <- files join fileStatuses on (_.id === _.fileId) joinLeft fileFormats on (_._2.fileId === _.fileId)
     } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.map(_.pronomId), fs.fileId)
 
     def boolToInt(b: Boolean): Int = if (b) 1 else 0
 
-    val result: Future[Seq[(String, String, String, Option[String], UUID)]] = db.run(query.result)
+    println(query.result.statements)
+    val result = db.run(query.result)
 
     val checkList: Future[Seq[FileCheck]] = result.map(_.map(f => FileCheck(f._1, f._2, f._3, f._4)))
 
 
     val fn: (FileStatusCount, FileCheck) => FileStatusCount = (acc, s) => {
-      val checksumCount = acc.checksumCount + boolToInt(s.serverChecksum.length > 0 )
-      val virusCount: Int = acc.virusCount + boolToInt(s.virusStatus.length > 0)
-      val fileFormatCount: Int = acc.fileFormatCount + boolToInt(s.pronomId.getOrElse("").length > 0)
+      val isCompleteCount = acc.completeCount + boolToInt(s.serverChecksum.length > 0 && s.virusStatus.length > 0 && s.pronomId.getOrElse("").length > 0)
       val error = acc.error || (s.virusStatus != "OK" && s.virusStatus.nonEmpty) || (s.serverChecksum != s.clientChecksum)
-      FileStatusCount(virusCount, fileFormatCount, checksumCount, error)
+      FileStatusCount(isCompleteCount, error)
     }
-    val results: Future[FileStatusCount] = checkList.map(_.foldLeft(FileStatusCount(0, 0, 0, false))(fn))
+    val results: Future[FileStatusCount] = checkList.map(_.foldLeft(FileStatusCount(0, false))(fn))
     results.onComplete(println(_))
 
     for {
       r <- result
       fsc <- results
     } yield {
-      val percent: (Int) => Int = cnt => Math.floor(cnt.toDouble/ r.length.toDouble * 100).intValue()
-      FileCheckStatus(percent(fsc.virusCount), percent(fsc.fileFormatCount), percent(fsc.checksumCount), fsc.error)
+      FileCheckStatus(fsc.completeCount, r.length, fsc.error)
     }
 
   }
@@ -103,11 +99,17 @@ object FileStatusDao {
 
 class FileStatusTable(tag: Tag) extends Table[FileStatus](tag, "file_status") {
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+
   def fileFormatVerified = column[Boolean]("file_format_verified")
+
   def fileId = column[UUID]("file_id")
+
   def clientSideChecksum = column[String]("client_side_checksum")
+
   def serverSideChecksum = column[String]("server_side_checksum")
+
   def antivirus_status = column[String]("antivirus_status")
+
   def file = foreignKey("file_file_status_fk", fileId, files)(_.id)
 
   override def * = (id.?, fileFormatVerified, fileId, clientSideChecksum, serverSideChecksum, antivirus_status).mapTo[FileStatus]

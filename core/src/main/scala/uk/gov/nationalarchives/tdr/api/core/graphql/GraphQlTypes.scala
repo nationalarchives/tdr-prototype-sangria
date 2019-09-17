@@ -106,6 +106,13 @@ object GraphQlTypes {
 
   ))
 
+  private val SubscriptionType = ObjectType("Subscription", fields[RequestContext, Unit](
+    Field(
+      "getFiles",
+      ListType(FileType),
+      resolve = ctx => ctx.ctx.files.all)
+  ))
+
   private val MutationType = ObjectType("Mutation", fields[RequestContext, Unit](
     Field(
       "createConsignment",
@@ -149,7 +156,7 @@ object GraphQlTypes {
     )
   ))
 
-  val schema: Schema[RequestContext, Unit] = Schema(QueryType, Some(MutationType))
+  val schema: Schema[RequestContext, Unit] = Schema(QueryType, Some(MutationType), Some(SubscriptionType))
 }
 
 case class Series(id: Int, name: String, description: String)
@@ -159,6 +166,6 @@ case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: S
 
 case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Instant, fileName: String)
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
-case class FileCheckStatus(virusPercentage: Int, fileFormatPercentage: Int, checksumPercentage: Int, error: Boolean)
+case class FileCheckStatus(totalComplete: Int, totalFiles: Int, error: Boolean)
 
 
