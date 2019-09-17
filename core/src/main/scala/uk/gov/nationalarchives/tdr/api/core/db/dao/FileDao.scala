@@ -1,5 +1,7 @@
 package uk.gov.nationalarchives.tdr.api.core.db.dao
 
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
 import slick.jdbc.PostgresProfile.api._
@@ -8,6 +10,7 @@ import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
 import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
+import uk.gov.nationalarchives.tdr.api.core.graphql.CreateFileInput
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,6 +31,10 @@ class FileDao(implicit val executionContext: ExecutionContext) {
     db.run(insertQuery += file)
   }
 
+  def createMultiple(inputs: Seq[CreateFileInput]): Future[Seq[FileRow]] = {
+    val fileRows: Seq[FileRow] = inputs.map(i => FileRow(None, i.path, i.consignmentId, i.fileSize, i.lastModifiedDate, i.fileName))
+    db.run(insertQuery ++= fileRows)
+  }
 }
 
 object FileDao {
@@ -35,13 +42,20 @@ object FileDao {
 }
 
 class FileTable(tag: Tag) extends Table[FileRow](tag, "file") {
+  implicit private val dateColumnType = MappedColumnType.base[Instant, Timestamp](
+    i => Timestamp.from(i),
+    ts => ts.toInstant
+  )
+
   def id = column[UUID]("id", O.PrimaryKey, O.AutoInc)
   def path = column[String]("path")
   def consignmentId = column[Int]("consignment_id")
   def fileSize = column[Int]("file_size")
-  def lastModifiedDate = column[String]("last_modified_date")
+  def lastModifiedDate = column[Instant]("last_modified_date")
   def fileName = column[String]("file_name")
   def consignment = foreignKey("file_consignment_fk", consignmentId, consignments)(_.id)
 
+  //mapTo function displaying error in Intellij but not causing any problems with compilation and running
+  //Likely a bug with Intellij error detection
   override def * = (id.?, path, consignmentId, fileSize, lastModifiedDate, fileName).mapTo[FileRow]
 }
