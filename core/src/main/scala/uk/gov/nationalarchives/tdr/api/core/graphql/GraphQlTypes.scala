@@ -1,7 +1,10 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql
 
+import java.time._
 import java.util.UUID
 
+import cats.syntax.either._
+import io.circe.Decoder
 import io.circe.generic.auto._
 import sangria.ast.StringValue
 import sangria.macros.derive._
@@ -14,6 +17,7 @@ import scala.util.{Failure, Success, Try}
 object GraphQlTypes {
 
   private case object UuidCoercionViolation extends ValueCoercionViolation("Valid UUID expected")
+  private case object InstantCoercionViolation extends ValueCoercionViolation("UTC Instant value expected")
 
   private def parseUuid(s: String): Either[ValueCoercionViolation, UUID] = Try(UUID.fromString(s)) match {
     case Success(uuid) => Right(uuid)
@@ -29,6 +33,29 @@ object GraphQlTypes {
     coerceInput = {
       case StringValue(s, _, _, _, _) => parseUuid(s)
       case _ => Left(UuidCoercionViolation)
+    }
+  )
+
+  implicit private val localDateTimeDecoder: Decoder[Instant] = Decoder.decodeString.emap(str =>
+    Either.catchNonFatal(Instant.parse(str)).leftMap(t => "LocalDateTime")
+  )
+
+  private def parseInstant(s: String) = Try(
+      Instant.parse(s)) match {
+      case Success(instant) ⇒ Right(instant)
+      case Failure(_) ⇒ Left(InstantCoercionViolation)
+  }
+
+  implicit private val InstantType = ScalarType[Instant](
+    "Instant",
+    coerceOutput = (i, _) => i.toString,
+    coerceUserInput = {
+      case s: String => parseInstant(s)
+      case _ => Left(InstantCoercionViolation)
+    },
+    coerceInput = {
+      case StringValue(s, _, _, _, _) => parseInstant(s)
+      case _ => Left(InstantCoercionViolation)
     }
   )
 
@@ -121,6 +148,6 @@ case class Series(id: Int, name: String, description: String)
 case class Consignment(id: Int, name: String, series: Series)
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
-case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: String, fileName: String)
-case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: String, fileName: String, clientSideChecksum: String)
+case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Instant, fileName: String)
+case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
 
