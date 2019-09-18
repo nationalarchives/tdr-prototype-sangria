@@ -46,8 +46,9 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
 
   def getFileCheckStatus(consignmentId: Int) = {
     val query = for {
-      ((c, fs), ff) <- files join fileStatuses on (_.id === _.fileId) joinLeft fileFormats on (_._2.fileId === _.fileId)
-    } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.map(_.pronomId), fs.fileId)
+      ((c, fs), ff) <- files join fileStatuses on (_.id === _.fileId) filter(_._1.consignmentId === consignmentId) joinLeft fileFormats on (_._2.fileId === _.fileId)
+    } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.map(_.pronomId), fs.fileId, c.consignmentId)
+
 
     def boolToInt(b: Boolean): Int = if (b) 1 else 0
 
