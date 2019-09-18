@@ -17,6 +17,7 @@ import scala.util.{Failure, Success, Try}
 object GraphQlTypes {
 
   private case object UuidCoercionViolation extends ValueCoercionViolation("Valid UUID expected")
+
   private case object InstantCoercionViolation extends ValueCoercionViolation("UTC Instant value expected")
 
   private def parseUuid(s: String): Either[ValueCoercionViolation, UUID] = Try(UUID.fromString(s)) match {
@@ -41,9 +42,9 @@ object GraphQlTypes {
   )
 
   private def parseInstant(s: String) = Try(
-      Instant.parse(s)) match {
-      case Success(instant) ⇒ Right(instant)
-      case Failure(_) ⇒ Left(InstantCoercionViolation)
+    Instant.parse(s)) match {
+    case Success(instant) ⇒ Right(instant)
+    case Failure(_) ⇒ Left(InstantCoercionViolation)
   }
 
   implicit private val InstantType = ScalarType[Instant](
@@ -69,6 +70,8 @@ object GraphQlTypes {
 
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
+  private val ConsignmentCreatorArg = Argument("creator", StringType)
+  private val ConsignmentTransferringBodyArg = Argument("transferringBody", StringType)
   private val SeriesIdArg = Argument("seriesId", IntType)
   private val SeriesNameArg = Argument("name", StringType)
   private val SeriesDescriptionArg = Argument("description", StringType)
@@ -124,8 +127,8 @@ object GraphQlTypes {
     Field(
       "createConsignment",
       ConsignmentType,
-      arguments = List(ConsignmentNameArg, SeriesIdArg),
-      resolve = ctx => ctx.ctx.consignments.create(ctx.arg(ConsignmentNameArg), ctx.arg(SeriesIdArg))),
+      arguments = List(ConsignmentNameArg, SeriesIdArg, ConsignmentCreatorArg, ConsignmentTransferringBodyArg),
+      resolve = ctx => ctx.ctx.consignments.create(ctx.arg(ConsignmentNameArg), ctx.arg(SeriesIdArg), ctx.arg(ConsignmentCreatorArg), ctx.arg(ConsignmentTransferringBodyArg))),
     Field(
       "createFile",
       FileType,
@@ -167,13 +170,21 @@ object GraphQlTypes {
 }
 
 case class Series(id: Int, name: String, description: String)
+
 case class CreateSeriesInput(name: String, description: String)
-case class Consignment(id: Int, name: String, series: Series)
+
+case class Consignment(id: Int, name: String, series: Series, creator: String, transferringBody: String)
+
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
+
 //TODO: need to define a custom scalar date type to store dates in DB
 
 case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Instant, fileName: String)
+
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
+
 case class FileCheckStatus(virusPercentage: Int, fileFormatPercentage: Int, checksumPercentage: Int, error: Boolean)
+
+case class ConsignmentInput(name: String, series: Series, creator: String, transferringBody:String)
 
 
