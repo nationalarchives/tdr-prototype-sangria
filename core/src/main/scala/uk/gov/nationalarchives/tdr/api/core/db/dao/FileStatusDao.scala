@@ -59,7 +59,7 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
 
     val fn: (FileStatusCount, FileCheck) => FileStatusCount = (acc, s) => {
       val isCompleteCount = acc.completeCount + boolToInt(s.serverChecksum.length > 0 && s.virusStatus.length > 0 && s.pronomId.getOrElse("").length > 0)
-      val error = acc.error || (s.virusStatus != "OK" && s.virusStatus.nonEmpty) || (s.serverChecksum != s.clientChecksum)
+      val error = acc.error || (s.virusStatus != "OK" && s.virusStatus.nonEmpty) || (s.serverChecksum != s.clientChecksum && !s.serverChecksum.isEmpty)
       FileStatusCount(isCompleteCount, error)
     }
     val results: Future[FileStatusCount] = checkList.map(_.foldLeft(FileStatusCount(0, false))(fn))
@@ -99,17 +99,11 @@ object FileStatusDao {
 
 class FileStatusTable(tag: Tag) extends Table[FileStatus](tag, "file_status") {
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
-
   def fileFormatVerified = column[Boolean]("file_format_verified")
-
   def fileId = column[UUID]("file_id")
-
   def clientSideChecksum = column[String]("client_side_checksum")
-
   def serverSideChecksum = column[String]("server_side_checksum")
-
   def antivirus_status = column[String]("antivirus_status")
-
   def file = foreignKey("file_file_status_fk", fileId, files)(_.id)
 
   override def * = (id.?, fileFormatVerified, fileId, clientSideChecksum, serverSideChecksum, antivirus_status).mapTo[FileStatus]

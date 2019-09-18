@@ -106,13 +106,6 @@ object GraphQlTypes {
 
   ))
 
-  private val SubscriptionType = ObjectType("Subscription", fields[RequestContext, Unit](
-    Field(
-      "getFiles",
-      ListType(FileType),
-      resolve = ctx => ctx.ctx.files.all)
-  ))
-
   private val MutationType = ObjectType("Mutation", fields[RequestContext, Unit](
     Field(
       "createConsignment",
@@ -156,7 +149,7 @@ object GraphQlTypes {
     )
   ))
 
-  val schema: Schema[RequestContext, Unit] = Schema(QueryType, Some(MutationType), Some(SubscriptionType))
+  val schema: Schema[RequestContext, Unit] = Schema(QueryType, Some(MutationType))
 }
 
 case class Series(id: Int, name: String, description: String)
