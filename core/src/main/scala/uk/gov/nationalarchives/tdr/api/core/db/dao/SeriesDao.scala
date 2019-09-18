@@ -11,8 +11,18 @@ import scala.concurrent.{ExecutionContext, Future}
 class SeriesDao(implicit val executionContext: ExecutionContext) {
   private val db = DbConnection.db
 
+  private val insertQuery = seriesCollections returning seriesCollections.map(_.id) into ((series, id) => series.copy(id = Some(id)))
+
+  def all: Future[Seq[SeriesRow]] = {
+    db.run(seriesCollections.result)
+  }
+
   def get(id: Int): Future[Option[SeriesRow]] = {
     db.run(seriesCollections.filter(_.id === id).result).map(_.headOption)
+  }
+
+  def create(series: SeriesRow): Future[SeriesRow] = {
+    db.run(insertQuery += series)
   }
 }
 
