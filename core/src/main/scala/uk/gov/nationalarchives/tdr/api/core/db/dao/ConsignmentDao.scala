@@ -36,7 +36,9 @@ class ConsignmentsTable(tag: Tag) extends Table[ConsignmentRow](tag, "consignmen
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
   def seriesId = column[Int]("series_id")
+  def creator = column[String]("creator")
+  def transferringBody = column[String] ("transferring_body")
   def series = foreignKey("consignment_series_fk", seriesId, seriesCollections)(_.id)
 
-  override def * : ProvenShape[ConsignmentRow] = (id.?, name, seriesId).mapTo[ConsignmentRow]
+  override def * : ProvenShape[ConsignmentRow] = (id.?, name, seriesId, creator, transferringBody).mapTo[ConsignmentRow]
 }
