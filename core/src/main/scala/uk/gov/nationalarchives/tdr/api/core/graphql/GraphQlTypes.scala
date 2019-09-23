@@ -170,21 +170,14 @@ object GraphQlTypes {
 }
 
 case class Series(id: Int, name: String, description: String)
-
 case class CreateSeriesInput(name: String, description: String)
-
 case class Consignment(id: Int, name: String, series: Series, creator: String, transferringBody: String)
-
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
-
 //TODO: need to define a custom scalar date type to store dates in DB
 
 case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Instant, fileName: String)
-
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
-
-case class FileCheckStatus(virusPercentage: Int, fileFormatPercentage: Int, checksumPercentage: Int, error: Boolean)
-
+case class FileCheckStatus(totalComplete: Int, totalFiles: Int, error: Boolean)
 case class ConsignmentInput(name: String, series: Series, creator: String, transferringBody:String)
 
 
