@@ -28,7 +28,7 @@ trait Routes extends FailFastCirceSupport {
   def graphQlActor: ActorRef
 
   // Required by the `ask` (?) method below
-  private implicit lazy val timeout: Timeout = Timeout(5.seconds) // usually we'd obtain the timeout from the system's configuration
+  private implicit lazy val timeout: Timeout = Timeout(15.seconds) // usually we'd obtain the timeout from the system's configuration
 
   //Use CORS' default settings to get local development to work.
   //Settings can be overridden using conf file or in code: https://github.com/lomigmegard/akka-http-cors
