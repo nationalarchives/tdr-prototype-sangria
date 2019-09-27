@@ -13,17 +13,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consignmentService: ConsignmentService, fileFormatService: FileFormatService)(implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[File]] = {
-    fileDao.all.flatMap(fileRows => {
-      val files = fileRows.map(fileRow =>
-        consignmentService.get(fileRow.consignmentId).map(consignment =>
-
-          File(fileRow.id.get, fileRow.path, consignment.get.id, null, null, fileRow.fileSize, fileRow.lastModifiedDate, fileRow.fileName)
-        )
-      )
-      Future.sequence(files)
-    })
+    fileDao.all.flatMap(fileRows => mapFileRows(fileRows))
   }
-
 
   def get(id: UUID) = {
     for {
@@ -37,6 +28,10 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       fileFormat.map(_.pronomId)
       , file.fileSize, file.lastModifiedDate, file.fileName
     )
+  }
+
+  def getByConsignment(consignmentId: Int): Future[Seq[File]] = {
+    fileDao.getByConsignment(consignmentId).flatMap(fileRows => mapFileRows(fileRows))
   }
 
   def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {
@@ -65,6 +60,15 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       Option.apply(""),
       r.fileSize,
       r.lastModifiedDate, r.fileName)
+  }
+
+  private def mapFileRows(fileRows: Seq[FileRow]): Future[Seq[File]] = {
+    val files = fileRows.map(fileRow =>
+      consignmentService.get(fileRow.consignmentId).map(consignment =>
+        File(fileRow.id.get, fileRow.path, consignment.get.id, null, null, fileRow.fileSize, fileRow.lastModifiedDate, fileRow.fileName)
+      )
+    )
+    Future.sequence(files)
   }
 
   def create(input: graphql.CreateFileInput): Future[File] = {

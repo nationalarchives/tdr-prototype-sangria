@@ -75,6 +75,11 @@ object GraphQlTypes {
       Field("creator", StringType, resolve = _.value.creator),
       Field("transferringBody", StringType, resolve = _.value.transferringBody),
       Field("series", SeriesType, resolve = _.value.series),
+      Field(
+        "files",
+        ListType(FileType),
+        resolve = context => DeferConsignmentFiles(context.value.id)
+      )
     )
   )
 
