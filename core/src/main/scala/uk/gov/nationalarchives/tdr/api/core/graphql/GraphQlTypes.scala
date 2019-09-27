@@ -62,11 +62,21 @@ object GraphQlTypes {
 
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val CreateSeriesInputType: InputObjectType[CreateSeriesInput] = deriveInputObjectType[CreateSeriesInput]()
-  implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
   implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
   implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType: InputObjectType[CreateFileInput] = deriveInputObjectType[CreateFileInput]()
   implicit private val FileCheckStatusType: ObjectType[Unit, FileCheckStatus] = deriveObjectType[Unit, FileCheckStatus]()
+
+  implicit private val ConsignmentType: ObjectType[Unit, Consignment] = ObjectType(
+    "Consignment",
+    fields[Unit, Consignment](
+      Field("id", IntType, resolve = _.value.id),
+      Field("name", StringType, resolve = _.value.name),
+      Field("creator", StringType, resolve = _.value.creator),
+      Field("transferringBody", StringType, resolve = _.value.transferringBody),
+      Field("series", SeriesType, resolve = _.value.series),
+    )
+  )
 
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
