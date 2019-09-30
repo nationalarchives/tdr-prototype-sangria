@@ -4,20 +4,17 @@ import java.util.UUID
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileStatusDao
 import uk.gov.nationalarchives.tdr.api.core.db.model
-import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatus}
-import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, FileCheckStatus}
+import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
+import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, FileCheckStatus, FileStatus}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionContext: ExecutionContext) {
 
-
-  def createMutiple(pathToInput: Map[String, CreateFileInput], result: Seq[FileRow]): Future[Seq[FileStatus]] = {
+  def createMutiple(pathToInput: Map[String, CreateFileInput], result: Seq[FileRow]): Future[Seq[model.FileStatus]] = {
     val fileStatusRows = result.map(r => model.FileStatus(None, false, r.id.get, pathToInput(r.path).clientSideChecksum, "", ""))
     fileStatusDao.createMultiple(fileStatusRows)
   }
-
-
 
   def updateServerSideChecksum(fileId: UUID, checksum: String): Future[Boolean] = {
     fileStatusDao.updateServerSideChecksum(fileId, checksum).map(a => {
@@ -51,11 +48,13 @@ class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionCont
     })
   }
 
-  def create(fileId: UUID, clientSideChecksum: String): Future[FileStatus] = {
+  def create(fileId: UUID, clientSideChecksum: String): Future[model.FileStatus] = {
     fileStatusDao.create(fileId, clientSideChecksum)
   }
 
-  def getByFileId(fileId: UUID): Future[Option[model.FileStatus]] = {
-    fileStatusDao.getByFileId(fileId)
+  def getByFileId(fileId: UUID): Future[Option[FileStatus]] = {
+    fileStatusDao.getByFileId(fileId).map(_.map(fileStatus =>
+      FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus)
+    ))
   }
 }
