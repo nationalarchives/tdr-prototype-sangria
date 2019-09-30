@@ -72,7 +72,11 @@ object GraphQlTypes {
       Field("id", UuidType, resolve = _.value.id),
       Field("path", StringType, resolve = _.value.path),
       Field("consignmentId", IntType, resolve = _.value.consignmentId),
-      Field("fileStatus", FileStatusType, resolve = _.value.fileStatus),
+      Field(
+        "fileStatus",
+        FileStatusType,
+        resolve = context => DeferFileStatus(context.value.id)
+      ),
       Field("pronomId", OptionType(StringType), resolve = _.value.pronomId),
       Field("fileSize", IntType, resolve = _.value.fileSize),
       Field("lastModifiedDate", InstantType, resolve = _.value.lastModifiedDate),
