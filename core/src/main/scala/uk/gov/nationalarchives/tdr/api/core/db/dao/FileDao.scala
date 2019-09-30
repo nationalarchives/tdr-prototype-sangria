@@ -27,6 +27,10 @@ class FileDao(implicit val executionContext: ExecutionContext) {
     db.run(files.filter(_.id === id).result).map(_.headOption)
   }
 
+  def getByConsignment(consignmentId: Int): Future[Seq[FileRow]] = {
+    db.run(files.filter(_.consignmentId === consignmentId).result)
+  }
+
   def create(file: FileRow): Future[FileRow] = {
     db.run(insertQuery += file)
   }

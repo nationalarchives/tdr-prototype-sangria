@@ -7,7 +7,7 @@ import sangria.marshalling.circe._
 import sangria.parser.QueryParser
 import uk.gov.nationalarchives.tdr.api.core.db.dao._
 import uk.gov.nationalarchives.tdr.api.core.graphql.service._
-import uk.gov.nationalarchives.tdr.api.core.graphql.{GraphQlTypes, RequestContext}
+import uk.gov.nationalarchives.tdr.api.core.graphql.{DeferredResolver, GraphQlTypes, RequestContext}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -30,7 +30,13 @@ object GraphQlServer {
     query match {
       case Success(doc) =>
         val variables = request.variables.getOrElse(Json.obj())
-        Executor.execute(GraphQlTypes.schema, doc, requestContext, operationName = request.operationName, variables = variables)
+        Executor.execute(
+          GraphQlTypes.schema,
+          doc, requestContext,
+          operationName = request.operationName,
+          variables = variables,
+          deferredResolver = new DeferredResolver
+        )
       case Failure(e) =>
         Future.failed(e)
     }
