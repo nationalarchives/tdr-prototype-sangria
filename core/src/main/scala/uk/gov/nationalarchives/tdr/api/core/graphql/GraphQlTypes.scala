@@ -67,6 +67,13 @@ object GraphQlTypes {
   implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType: InputObjectType[CreateFileInput] = deriveInputObjectType[CreateFileInput]()
   implicit private val FileCheckStatusType: ObjectType[Unit, FileCheckStatus] = deriveObjectType[Unit, FileCheckStatus]()
+  implicit private val UserType: ObjectType[Unit, User] = deriveObjectType[Unit, User]()
+  implicit private val PasswordInfoType: ObjectType[Unit, PasswordInfo] = deriveObjectType[Unit, PasswordInfo]()
+  implicit private val UserDataType: InputObjectType[UserInput] = deriveInputObjectType[UserInput]()
+  implicit private val PasswordInputType: InputObjectType[PasswordInput] = deriveInputObjectType[PasswordInput]()
+  implicit private val PasswordResetType: ObjectType[Unit, PasswordResetToken] = deriveObjectType[Unit, PasswordResetToken]()
+
+
 
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
@@ -82,6 +89,12 @@ object GraphQlTypes {
   private val PronomIdArg = Argument("pronomId", StringType)
   private val FileInputArg = Argument("createFileInput", CreateFileInputType)
   private val MultipleFileInputsArg = Argument("createFileInputs", ListInputType(CreateFileInputType))
+  private val ProviderKeyArg = Argument("providerKey", StringType)
+  private val ProviderIdArg = Argument("providerId", StringType)
+  private val EmailArg = Argument("email", StringType)
+  private val TokenArg = Argument("token", StringType)
+  private val UserDataArg = Argument("userData", UserDataType)
+  private val PasswordInputArg = Argument("passwordInput", PasswordInputType)
 
   private val QueryType = ObjectType("Query", fields[RequestContext, Unit](
     Field(
@@ -92,6 +105,18 @@ object GraphQlTypes {
       "getConsignments",
       ListType(ConsignmentType),
       resolve = ctx => ctx.ctx.consignments.all),
+    Field(
+      "getSeriesForCreator",
+      OptionType(SeriesType),
+      arguments = List(SeriesIdArg, ConsignmentCreatorArg),
+      resolve = ctx => ctx.ctx.series.get(ctx.arg(SeriesIdArg), ctx.arg(ConsignmentCreatorArg))
+    ),
+    Field(
+      "getConsignmentForCreator",
+      OptionType(ConsignmentType),
+      arguments = List(ConsignmentIdArg, ConsignmentCreatorArg),
+      resolve = ctx => ctx.ctx.consignments.get(ctx.arg(ConsignmentIdArg), ctx.arg(ConsignmentCreatorArg))
+    ),
     Field(
       "getConsignment",
       OptionType(ConsignmentType),
@@ -113,8 +138,25 @@ object GraphQlTypes {
       FileCheckStatusType,
       arguments = List(ConsignmentIdArg),
       resolve = ctx => ctx.ctx.fileStatuses.getFileCheckStatus(ctx.arg(ConsignmentIdArg))
+    ),
+    Field(
+      "getUser",
+      OptionType(UserType),
+      arguments = List(ProviderKeyArg, ProviderIdArg),
+      resolve = ctx => ctx.ctx.users.get(ctx.arg(ProviderKeyArg), ctx.arg(ProviderIdArg))
+    ),
+    Field(
+      "findPassword",
+      OptionType(PasswordInfoType),
+      arguments = List(ProviderKeyArg),
+      resolve = ctx => ctx.ctx.users.findPassword(ctx.arg(ProviderKeyArg))
+    ),
+    Field(
+      "isPasswordTokenValid",
+      BooleanType,
+      arguments = List(EmailArg, TokenArg),
+      resolve = ctx => ctx.ctx.users.isPasswordResetTokenValid(ctx.arg(EmailArg), ctx.arg(TokenArg))
     )
-
   ))
 
   private val MutationType = ObjectType("Mutation", fields[RequestContext, Unit](
@@ -163,6 +205,36 @@ object GraphQlTypes {
       ListType(FileType),
       arguments = List(MultipleFileInputsArg),
       resolve = ctx => ctx.ctx.files.createMultiple(ctx.arg(MultipleFileInputsArg))
+    ),
+    Field(
+      "createUser",
+      OptionType(UserType),
+      arguments = List(UserDataArg),
+      resolve = ctx => ctx.ctx.users.create(ctx.arg(UserDataArg))
+    ),
+    Field(
+      "addPassword",
+      OptionType(PasswordInfoType),
+      arguments = List(PasswordInputArg),
+      resolve = ctx => ctx.ctx.users.addPassword(ctx.arg(PasswordInputArg))
+    ),
+    Field(
+      "updatePassword",
+      IntType,
+      arguments = List(PasswordInputArg),
+      resolve = ctx => ctx.ctx.users.updatePassword(ctx.arg(PasswordInputArg))
+    ),
+      Field(
+      "removePassword",
+      IntType,
+      arguments = List(ProviderKeyArg),
+      resolve = ctx => ctx.ctx.users.deletePassword(ctx.arg(ProviderKeyArg))
+    ),
+    Field(
+      "createPasswordResetToken",
+      OptionType(PasswordResetType),
+      arguments = List(EmailArg),
+      resolve = ctx => ctx.ctx.users.createResetPasswordToken(ctx.arg(EmailArg))
     )
   ))
 
@@ -179,5 +251,10 @@ case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStat
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
 case class FileCheckStatus(totalComplete: Int, totalFiles: Int, error: Boolean)
 case class ConsignmentInput(name: String, series: Series, creator: String, transferringBody:String)
+case class User(id: Int, firstName: String, lastName: String, email: String, providerId: String, providerKey: String)
+case class UserInput(firstName: String, lastName: String, email: String, providerId: String)
+case class PasswordInfo(hasher: String,password: String,salt: Option[String])
+case class PasswordInput(providerKey: String, hasher: String,password: String,salt: Option[String])
+case class PasswordResetToken(email: String, token: String)
 
 
