@@ -10,7 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class FileStatusService(fileStatusDao: FileStatusDao)(implicit val executionContext: ExecutionContext) {
 
-  def createMutiple(pathToInput: Map[String, CreateFileInput], result: Seq[FileRow]): Future[Seq[FileStatusRow]] = {
+  def createMultiple(pathToInput: Map[String, CreateFileInput], result: Seq[FileRow]): Future[Seq[FileStatusRow]] = {
     val fileStatusRows = result.map(r => FileStatusRow(None, false, r.id.get, pathToInput(r.path).clientSideChecksum, "", ""))
     fileStatusDao.createMultiple(fileStatusRows)
   }

@@ -36,7 +36,7 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
 
     for {
       result <- fileDao.createMultiple(inputs)
-      fileStatuses <- fileStatusService.createMutiple(pathToInput, result)
+      fileStatuses <- fileStatusService.createMultiple(pathToInput, result)
     } yield {
 
       val fileIdToStatus: Map[UUID, FileStatusRow] = fileStatuses.groupBy(_.fileId).mapValues(_.head)
