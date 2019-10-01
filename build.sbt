@@ -25,23 +25,6 @@ lazy val core = (project in file("core"))
     )
   )
 
-lazy val lambda = (project in file("lambda"))
-  .settings(
-    name := "TDR GraphQL Lambda handler",
-    assemblyJarName in assembly := "tdr-api-lambda.jar",
-    libraryDependencies ++= Seq(
-      // TODO: Is there an equivalent in the SDK v2?
-      "com.amazonaws" % "aws-lambda-java-core" % "1.1.0",
-      "io.circe" %% "circe-parser" % "0.9.3",      
-    ),
-    assemblyMergeStrategy in assembly := {
-      case "META-INF/io.netty.versions.properties" => MergeStrategy.first
-      case x =>
-        val oldStrategy = (assemblyMergeStrategy in assembly).value
-        oldStrategy(x)
-    }
-  ).dependsOn(core)
-
 lazy val root = (project in file("."))
   .settings(
     name := "TDR GraphQL akka-http API",

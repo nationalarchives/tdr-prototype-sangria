@@ -10,11 +10,8 @@ It uses the Scala library [Sangria] to respond to GraphQL queries.
 
 ## Design
 
-The application is composed of three sbt projects: the core GraphQL logic and two entry points. One entry point is an
-akka-http server, which can be run in development. The other is a request handler that can process an AWS Lambda event.
-
-We are still trialling AWS Lambda for the API hosting. If cold starts turn out to be too slow, we may decide to deploy
-the akka-http server to an ECS host instead.
+The application is composed of two sbt projects: the core GraphQL logic and the entry point, which is an akka-http
+server.
 
 ### Database migrations
 
@@ -104,59 +101,33 @@ To use the schema in Postman, see the [Postman guide to importing GraphQL schema
 
 ### Infrastructure
 
-We plan to add this API to our [Terraform config][tdr-terraform] soon, but to manually configure the infrastructure in
-the AWS console:
+The API is deployed to AWS ECS. The infrastructure is defined in the [TDR Terraform config][tdr-terraform].
 
-[tdr-terraform]: https://github.com/nationalarchives/tdr-prototype-terraform 
-
-#### AWS Lambda
-
-- Create a new Lambda function with a Java 8 runtime
-- Set the entry point to be `uk.gov.nationalarchives.tdr.api.lambda.RequestHandler::handleRequest`
-- Set the timeout to at least 30 seconds
-- Set the environment variable `TDR_API_ENVIRONMENT` with value `TEST`
-
-#### AWS Aurora
-
-Create a new Aurora PostgreSQL database.
-
-#### Parameter Store
-
-In the AWS Systems Manager Parameter Store, add three new parameters:
-
-- Set `/tdr/prototype/api/db/url` to the Aurora cluster read-write endpoint, which will be something like
-  `cluster-name.cluster-abdefg.eu-west-2.rds.amazonaws.com`
-- Set `/tdr/prototype/api/db/username` to the Aurora DB username, which will probably be the default value `postgres`
-- Set `/tdr/prototype/api/db/password` to the Aurora DB password, which you can generate or set in the AWS console for
-  Aurora
-
-Ultimately, we'll want to store the DB password somewhere more secure than the parameter store, but this is currently
-just a prototype to transfer test data.
-
-#### API Gateway
-
-- Create a new API Gateway
-- Add a POST endpoint at /graphql, and set the integration type to "Lambda Function". Do not check "Use Lambda Proxy
-  integration", since this would send the whole HTTP request to the Lambda. The request handler is configured to parse
-  just the POST body, not the whole request.
-- Add a Cognito authorizer pointing to your user pool
-- Deploy the Gateway
-
-#### ECS cluster
-
-The ECS cluster is used to run database migrations (see below).
-
-- Create an ECS cluster using Fargate as the container host
-- Create a task definition which also uses Fargate
-  - Define a container which points to the Docker image `docker.io/nationalarchives/tdr-prototype-db-migrations`
-  - Add environment variables `DB_PASSWORD`, `DB_URL` and `DB_USERNAME` which use `ValueFrom` to point to the parameters
-    you added to the parameter store
+[tdr-terraform]: https://github.com/nationalarchives/tdr-prototype-terraform
 
 ### Deploy the API
 
-- Build the lambda sbt project locally by running `sbt clean lambda/assembly`, which should build a jar file at
-  lambda/target/scala-2.12/tdr-api-lambda.jar
-- Upload the jar file to the Lambda in the AWS console
+- Build the lambda sbt project locally by running `sbt clean assembly`, which should build a jar file at
+  target/scala-2.12/tdr-api.jar
+- Build the Docker image by running `docker build . --tag nationalarchives/sangria:env-name`
+- Push the image to Docker Hub with `docker push nationalarchives/sangria:env-name`
+
+Then start a container running the new image. You can do this in the AWS Console or on the command line.
+
+In the AWS Console:
+
+- Navigate to the cluster in ECS
+- Check the `sangria-graphql-service-env-name` service and click Update
+- Select "Force new deployment" and click "Skip to review"
+
+Alternatively, run the AWS CLI:
+
+```
+aws ecs update-service --service sangria-graphql-service-dev --cluster tdr-graphql-ecs-dev --force-new-deployment
+```
+
+ECS will start a new service running the new image, switch the load balancer over to the new service, and shut the old
+service down. The whole process takes about 10 minutes.
 
 ### Database migrations
 
