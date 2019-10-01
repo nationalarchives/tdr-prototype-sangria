@@ -5,11 +5,10 @@ import java.util.UUID
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Tag
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
-import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileFormatDao.fileFormats
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileStatusDao.fileStatuses
-import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatus}
+import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatusRow}
 import uk.gov.nationalarchives.tdr.api.core.graphql.FileCheckStatus
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,20 +22,20 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
 
   private val insert = fileStatuses returning fileStatuses.map(_.id) into ((fileStatus, id) => fileStatus.copy(id = Some(id)))
 
-  def create(fileId: UUID, clientSideChecksum: String): Future[FileStatus] = {
-    val fileStatus = FileStatus(None, false, fileId, clientSideChecksum, "", "")
+  def create(fileId: UUID, clientSideChecksum: String): Future[FileStatusRow] = {
+    val fileStatus = FileStatusRow(None, false, fileId, clientSideChecksum, "", "")
     db.run(insert += fileStatus)
   }
 
-  def createMultiple(fileStatusRows: Seq[FileStatus]): Future[Seq[FileStatus]] = {
+  def createMultiple(fileStatusRows: Seq[FileStatusRow]): Future[Seq[FileStatusRow]] = {
     db.run(insert ++= fileStatusRows)
   }
 
-  def get(id: Int): Future[Option[FileStatus]] = {
+  def get(id: Int): Future[Option[FileStatusRow]] = {
     db.run(fileStatuses.filter(_.id === id).result).map(_.headOption)
   }
 
-  def getByFileId(fileId: UUID): Future[Option[FileStatus]] = {
+  def getByFileId(fileId: UUID): Future[Option[FileStatusRow]] = {
     db.run(fileStatuses.filter(_.fileId === fileId).result).map(_.headOption)
   }
 
@@ -98,7 +97,7 @@ object FileStatusDao {
   val fileStatuses = TableQuery[FileStatusTable]
 }
 
-class FileStatusTable(tag: Tag) extends Table[FileStatus](tag, "file_status") {
+class FileStatusTable(tag: Tag) extends Table[FileStatusRow](tag, "file_status") {
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
   def fileFormatVerified = column[Boolean]("file_format_verified")
   def fileId = column[UUID]("file_id")
@@ -107,5 +106,5 @@ class FileStatusTable(tag: Tag) extends Table[FileStatus](tag, "file_status") {
   def antivirus_status = column[String]("antivirus_status")
   def file = foreignKey("file_file_status_fk", fileId, files)(_.id)
 
-  override def * = (id.?, fileFormatVerified, fileId, clientSideChecksum, serverSideChecksum, antivirus_status).mapTo[FileStatus]
+  override def * = (id.?, fileFormatVerified, fileId, clientSideChecksum, serverSideChecksum, antivirus_status).mapTo[FileStatusRow]
 }
