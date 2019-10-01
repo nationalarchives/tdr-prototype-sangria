@@ -1,10 +1,8 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
-
 import java.util.UUID
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
-import uk.gov.nationalarchives.tdr.api.core.db.model
-import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
+import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatusRow}
 import uk.gov.nationalarchives.tdr.api.core.graphql
 import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, File, FileStatus}
 
@@ -41,16 +39,16 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       fileStatuses <- fileStatusService.createMutiple(pathToInput, result)
     } yield {
 
-      val fileIdToStatus: Map[UUID, model.FileStatus] = fileStatuses.groupBy(_.fileId).mapValues(_.head)
+      val fileIdToStatus: Map[UUID, FileStatusRow] = fileStatuses.groupBy(_.fileId).mapValues(_.head)
       result.map(r => {
-        val fileStatus: model.FileStatus = fileIdToStatus(r.id.get)
+        val fileStatus: FileStatusRow = fileIdToStatus(r.id.get)
         getFileReturnValue(r, fileStatus)
       }
       )
     }
   }
 
-  private def getFileReturnValue(r: FileRow, fileStatus: model.FileStatus) = {
+  private def getFileReturnValue(r: FileRow, fileStatus: FileStatusRow) = {
     val returnFileStatus = FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, r.id.get, fileStatus.antivirusStatus)
     File(r.id.get,
       r.path,
