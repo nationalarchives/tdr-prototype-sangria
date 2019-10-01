@@ -62,8 +62,6 @@ object GraphQlTypes {
 
   implicit private val SeriesType: ObjectType[Unit, Series] = deriveObjectType[Unit, Series]()
   implicit private val CreateSeriesInputType: InputObjectType[CreateSeriesInput] = deriveInputObjectType[CreateSeriesInput]()
-  implicit private val ConsignmentType: ObjectType[Unit, Consignment] = deriveObjectType[Unit, Consignment]()
-  implicit private val FileType: ObjectType[Unit, File] = deriveObjectType[Unit, File]()
   implicit private val FileStatusType: ObjectType[Unit, FileStatus] = deriveObjectType[Unit, FileStatus]()
   implicit private val CreateFileInputType: InputObjectType[CreateFileInput] = deriveInputObjectType[CreateFileInput]()
   implicit private val FileCheckStatusType: ObjectType[Unit, FileCheckStatus] = deriveObjectType[Unit, FileCheckStatus]()
@@ -74,6 +72,39 @@ object GraphQlTypes {
   implicit private val PasswordResetType: ObjectType[Unit, PasswordResetToken] = deriveObjectType[Unit, PasswordResetToken]()
 
 
+
+  implicit private val FileType: ObjectType[Unit, File] = ObjectType(
+    "File",
+    fields[Unit, File](
+      Field("id", UuidType, resolve = _.value.id),
+      Field("path", StringType, resolve = _.value.path),
+      Field("consignmentId", IntType, resolve = _.value.consignmentId),
+      Field(
+        "fileStatus",
+        FileStatusType,
+        resolve = context => DeferFileStatus(context.value.id)
+      ),
+      Field("pronomId", OptionType(StringType), resolve = _.value.pronomId),
+      Field("fileSize", IntType, resolve = _.value.fileSize),
+      Field("lastModifiedDate", InstantType, resolve = _.value.lastModifiedDate),
+      Field("fileName", StringType, resolve = _.value.fileName),
+    )
+  )
+  implicit private val ConsignmentType: ObjectType[Unit, Consignment] = ObjectType(
+    "Consignment",
+    fields[Unit, Consignment](
+      Field("id", IntType, resolve = _.value.id),
+      Field("name", StringType, resolve = _.value.name),
+      Field("creator", StringType, resolve = _.value.creator),
+      Field("transferringBody", StringType, resolve = _.value.transferringBody),
+      Field("series", SeriesType, resolve = _.value.series),
+      Field(
+        "files",
+        ListType(FileType),
+        resolve = context => DeferConsignmentFiles(context.value.id)
+      )
+    )
+  )
 
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)

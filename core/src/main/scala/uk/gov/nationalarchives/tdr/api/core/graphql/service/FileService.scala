@@ -1,10 +1,8 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
-
 import java.util.UUID
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
-import uk.gov.nationalarchives.tdr.api.core.db.model
-import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
+import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatusRow}
 import uk.gov.nationalarchives.tdr.api.core.graphql
 import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, File, FileStatus}
 
@@ -13,30 +11,24 @@ import scala.concurrent.{ExecutionContext, Future}
 class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consignmentService: ConsignmentService, fileFormatService: FileFormatService)(implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[File]] = {
-    fileDao.all.flatMap(fileRows => {
-      val files = fileRows.map(fileRow =>
-        consignmentService.get(fileRow.consignmentId).map(consignment =>
-
-          File(fileRow.id.get, fileRow.path, consignment.get.id, null, null, fileRow.fileSize, fileRow.lastModifiedDate, fileRow.fileName)
-        )
-      )
-      Future.sequence(files)
-    })
+    fileDao.all.flatMap(fileRows => mapFileRows(fileRows))
   }
-
 
   def get(id: UUID) = {
     for {
       fileOption <- fileDao.get(id)
       file <- fileOption.map(Future.successful).getOrElse(Future.failed(new Exception))
-      fileStatusOption <- fileStatusService.getByFileId(fileOption.get.id.get)
-      fileStatus <- fileStatusOption.map(Future.successful).getOrElse(Future.failed(new Exception))
+      fileStatus <- fileStatusService.getByFileId(fileOption.get.id.get)
       fileFormat <- fileFormatService.getByFileId(file.id.get)
     } yield File(file.id.get, file.path, file.consignmentId,
-      FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, fileStatus.fileId, fileStatus.antivirusStatus),
+      fileStatus.get,
       fileFormat.map(_.pronomId)
       , file.fileSize, file.lastModifiedDate, file.fileName
     )
+  }
+
+  def getByConsignment(consignmentId: Int): Future[Seq[File]] = {
+    fileDao.getByConsignment(consignmentId).flatMap(fileRows => mapFileRows(fileRows))
   }
 
   def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {
@@ -44,19 +36,19 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
 
     for {
       result <- fileDao.createMultiple(inputs)
-      fileStatuses <- fileStatusService.createMutiple(pathToInput, result)
+      fileStatuses <- fileStatusService.createMultiple(pathToInput, result)
     } yield {
 
-      val fileIdToStatus: Map[UUID, model.FileStatus] = fileStatuses.groupBy(_.fileId).mapValues(_.head)
+      val fileIdToStatus: Map[UUID, FileStatusRow] = fileStatuses.groupBy(_.fileId).mapValues(_.head)
       result.map(r => {
-        val fileStatus: model.FileStatus = fileIdToStatus(r.id.get)
+        val fileStatus: FileStatusRow = fileIdToStatus(r.id.get)
         getFileReturnValue(r, fileStatus)
       }
       )
     }
   }
 
-  private def getFileReturnValue(r: FileRow, fileStatus: model.FileStatus) = {
+  private def getFileReturnValue(r: FileRow, fileStatus: FileStatusRow) = {
     val returnFileStatus = FileStatus(fileStatus.id.get, fileStatus.clientSideChecksum, fileStatus.serverSideChecksum, fileStatus.fileFormatVerified, r.id.get, fileStatus.antivirusStatus)
     File(r.id.get,
       r.path,
@@ -65,6 +57,15 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       Option.apply(""),
       r.fileSize,
       r.lastModifiedDate, r.fileName)
+  }
+
+  private def mapFileRows(fileRows: Seq[FileRow]): Future[Seq[File]] = {
+    val files = fileRows.map(fileRow =>
+      consignmentService.get(fileRow.consignmentId).map(consignment =>
+        File(fileRow.id.get, fileRow.path, consignment.get.id, null, null, fileRow.fileSize, fileRow.lastModifiedDate, fileRow.fileName)
+      )
+    )
+    Future.sequence(files)
   }
 
   def create(input: graphql.CreateFileInput): Future[File] = {
