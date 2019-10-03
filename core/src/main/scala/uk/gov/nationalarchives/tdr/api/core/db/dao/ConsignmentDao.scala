@@ -10,6 +10,8 @@ import uk.gov.nationalarchives.tdr.api.core.db.model.ConsignmentRow
 import scala.concurrent.{ExecutionContext, Future}
 
 class ConsignmentDao(implicit val executionContext: ExecutionContext) {
+
+
   private val db = DbConnection.db
 
   private val insertQuery = consignments returning consignments.map(_.id) into ((consignment, id) => consignment.copy(id = Some(id)))
@@ -20,6 +22,10 @@ class ConsignmentDao(implicit val executionContext: ExecutionContext) {
 
   def get(id: Int): Future[Option[ConsignmentRow]] = {
     db.run(consignments.filter(_.id === id).result).map(_.headOption)
+  }
+
+  def get(id: Int, creator: String): Future[Option[ConsignmentRow]]  = {
+    db.run(consignments.filter(_.id === id).filter(_.creator === creator).result).map(_.headOption)
   }
 
   def create(consignment: ConsignmentRow): Future[ConsignmentRow] = {

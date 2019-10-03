@@ -2,7 +2,7 @@ package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao
 import uk.gov.nationalarchives.tdr.api.core.db.model.ConsignmentRow
-import uk.gov.nationalarchives.tdr.api.core.graphql.Consignment
+import uk.gov.nationalarchives.tdr.api.core.graphql.{Consignment, Series}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,6 +28,10 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
       case Some(f) => f.map(Some(_))
       case None => Future.successful(None)
     })
+  }
+
+  def get(id: Int, creator: String) = {
+    consignmentDao.get(id, creator).map(co => co.map(c => Consignment(c.id.get, c.name, null, "", "")))
   }
 
   def create(name: String, seriesId: Int, creator: String, transferringBody: String): Future[Consignment] = {

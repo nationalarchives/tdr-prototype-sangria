@@ -24,6 +24,12 @@ class SeriesService(seriesDao: SeriesDao)(implicit val executionContext: Executi
     ))
   }
 
+  def get(id: Int, creator: String): Future[Option[Series]] = {
+    seriesDao.get(id, creator).map(_.map(series =>
+      Series(series.id.get, series.name, series.description)
+    ))
+  }
+
   def create(input: CreateSeriesInput): Future[Series] = {
     val newSeries = SeriesRow(None, input.name, input.description)
     val result = seriesDao.create(newSeries)
