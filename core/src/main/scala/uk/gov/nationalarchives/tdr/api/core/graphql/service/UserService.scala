@@ -1,9 +1,9 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
 import uk.gov.nationalarchives.tdr.api.core.db.dao.UserDao
-import uk.gov.nationalarchives.tdr.api.core.db.model.{Password, User}
+import uk.gov.nationalarchives.tdr.api.core.db.model.{Password, TotpInfo, TotpScratchCode, User}
 import uk.gov.nationalarchives.tdr.api.core.graphql
-import uk.gov.nationalarchives.tdr.api.core.graphql.{PasswordInfo, PasswordInput, PasswordResetToken, UserInput}
+import uk.gov.nationalarchives.tdr.api.core.graphql.{PasswordInfo, PasswordInput, PasswordResetToken, TotpInfoInput, TotpInfoOutput, TotpScratchCodesInput, TotpScratchCodesOuput, UserInput}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,5 +45,35 @@ class UserService(userDao: UserDao)(implicit val executionContext: ExecutionCont
 
   def isPasswordResetTokenValid(email: String, token: String) = {
     userDao.getPasswordResetToken(email, token).map(t => t.nonEmpty)
+  }
+
+  def findTotp(providerKey: String) = {
+    userDao.findTotpInfo(providerKey).map(_.map( t => TotpInfoOutput(t.id.get, t.providerKey, t.sharedKey, Seq())))
+  }
+
+  def findTotpScratchCodes(infoId: Int) = {
+    userDao.findTotpScratchCodes(infoId).map(_.map(t => TotpScratchCodesOuput(t.id.get, t.hasher, t.password, t.salt)))
+  }
+
+  def addTotp(totpInput: TotpInfoInput) = {
+    for {
+      info <- userDao.addTotpInfo(TotpInfo(None, totpInput.providerKey, totpInput.sharedKey))
+      scratchCodes <- userDao.addTotpScratchCodes(totpInput.scratchCodes.map(s => TotpScratchCode(None, s.hasher, s.password, s.salt, info.id.get)))
+    } yield TotpInfoOutput(info.id.get, info.providerKey, info.sharedKey, scratchCodes.map(s => TotpScratchCodesOuput(s.id.get, s.hasher, s.password, s.salt)))
+  }
+
+  def updateTotp(totpInput: TotpInfoInput) = {
+    for {
+      _ <- userDao.deleteTotpScratchCodes(totpInput.providerKey)
+      _ <- userDao.deleteTotpInfo(totpInput.providerKey)
+      i <- addTotp(totpInput)
+    } yield i.id
+  }
+
+  def deleteTotp(providerKey: String) = {
+    for {
+      _ <- userDao.deleteTotpScratchCodes(providerKey)
+      infoDel <- userDao.deleteTotpInfo(providerKey)
+    } yield infoDel
   }
 }

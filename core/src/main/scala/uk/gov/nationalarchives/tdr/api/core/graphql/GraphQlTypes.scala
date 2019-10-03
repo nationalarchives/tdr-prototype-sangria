@@ -70,7 +70,9 @@ object GraphQlTypes {
   implicit private val UserDataType: InputObjectType[UserInput] = deriveInputObjectType[UserInput]()
   implicit private val PasswordInputType: InputObjectType[PasswordInput] = deriveInputObjectType[PasswordInput]()
   implicit private val PasswordResetType: ObjectType[Unit, PasswordResetToken] = deriveObjectType[Unit, PasswordResetToken]()
-
+  implicit private val TotpType: ObjectType[Unit, TotpScratchCodesOuput] = deriveObjectType[Unit, TotpScratchCodesOuput]()
+  implicit private val TotpScratchCodesInputType: InputObjectType[TotpScratchCodesInput] = deriveInputObjectType[TotpScratchCodesInput]()
+  implicit private val TotpInfoInputType: InputObjectType[TotpInfoInput] = deriveInputObjectType[TotpInfoInput]()
 
 
   implicit private val FileType: ObjectType[Unit, File] = ObjectType(
@@ -106,6 +108,16 @@ object GraphQlTypes {
     )
   )
 
+  implicit private val TotpInfoType: ObjectType[Unit, TotpInfoOutput] = ObjectType(
+    "TotpInfo",
+    fields[Unit, TotpInfoOutput](
+      Field("id", IntType, resolve = _.value.id),
+      Field("providerKey", StringType, resolve = _.value.providerKey),
+      Field("sharedKey", StringType, resolve = _.value.sharedKey),
+      Field("scratchCodes", ListType(TotpType), resolve = context => DeferScratchCodes(context.value.id))
+    )
+  )
+
   private val ConsignmentNameArg = Argument("name", StringType)
   private val ConsignmentIdArg = Argument("id", IntType)
   private val ConsignmentCreatorArg = Argument("creator", StringType)
@@ -126,6 +138,7 @@ object GraphQlTypes {
   private val TokenArg = Argument("token", StringType)
   private val UserDataArg = Argument("userData", UserDataType)
   private val PasswordInputArg = Argument("passwordInput", PasswordInputType)
+  private val TotpArg = Argument("totp", TotpInfoInputType)
 
   private val QueryType = ObjectType("Query", fields[RequestContext, Unit](
     Field(
@@ -181,6 +194,12 @@ object GraphQlTypes {
       OptionType(PasswordInfoType),
       arguments = List(ProviderKeyArg),
       resolve = ctx => ctx.ctx.users.findPassword(ctx.arg(ProviderKeyArg))
+    ),
+    Field(
+      "findTotp",
+      OptionType(TotpInfoType),
+      arguments = List(ProviderKeyArg),
+      resolve = ctx => ctx.ctx.users.findTotp(ctx.arg(ProviderKeyArg))
     ),
     Field(
       "isPasswordTokenValid",
@@ -262,6 +281,24 @@ object GraphQlTypes {
       resolve = ctx => ctx.ctx.users.deletePassword(ctx.arg(ProviderKeyArg))
     ),
     Field(
+      "addTotp",
+      OptionType(TotpInfoType),
+      arguments = List(TotpArg),
+      resolve = ctx => ctx.ctx.users.addTotp(ctx.arg(TotpArg))
+    ),
+    Field(
+      "updateTotp",
+      IntType,
+      arguments = List(TotpArg),
+      resolve = ctx => ctx.ctx.users.updateTotp(ctx.arg(TotpArg))
+    ),
+    Field(
+      "removeTotp",
+      IntType,
+      arguments = List(ProviderKeyArg),
+      resolve = ctx => ctx.ctx.users.deleteTotp(ctx.arg(ProviderKeyArg))
+    ),
+    Field(
       "createPasswordResetToken",
       OptionType(PasswordResetType),
       arguments = List(EmailArg),
@@ -287,5 +324,8 @@ case class UserInput(firstName: String, lastName: String, email: String, provide
 case class PasswordInfo(hasher: String,password: String,salt: Option[String])
 case class PasswordInput(providerKey: String, hasher: String,password: String,salt: Option[String])
 case class PasswordResetToken(email: String, token: String)
-
+case class TotpInfoOutput(id: Int, providerKey: String, sharedKey: String, scratchCodes: Seq[TotpScratchCodesOuput])
+case class TotpScratchCodesOuput(id: Int, hasher: String, password: String, salt: Option[String])
+case class TotpInfoInput(providerKey: String, sharedKey: String, scratchCodes: Seq[TotpScratchCodesInput])
+case class TotpScratchCodesInput(hasher: String, password: String, salt: Option[String])
 

@@ -16,3 +16,15 @@ email varchar(255) primary key,
 token varchar(64),
 expiry varchar(64)
 );
+
+
+create table totp_info(id serial primary key,
+provider_key varchar(255),
+shared_key varchar(255));
+
+create table totp_scratch_codes (id serial primary key,
+hasher varchar(255),
+password varchar(255),
+salt varchar(255),
+totp_info_id int,
+FOREIGN KEY (totp_info_id) REFERENCES totp_info (id));

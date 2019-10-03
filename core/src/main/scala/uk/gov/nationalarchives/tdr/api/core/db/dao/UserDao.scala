@@ -2,9 +2,8 @@ package uk.gov.nationalarchives.tdr.api.core.db.dao
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.{Date, UUID}
+import java.util.UUID
 
-import shapeless.Succ
 import slick.dbio.Effect
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -12,12 +11,12 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{ProvenShape, QueryBase}
 import slick.lifted.ProvenShape.proveShapeOf
 import slick.sql.FixedSqlStreamingAction
-import uk.gov.nationalarchives.tdr.api.core.db.{DbConnection, model}
-import uk.gov.nationalarchives.tdr.api.core.db.model.{Password, PasswordResetToken, User}
-import uk.gov.nationalarchives.tdr.api.core.db.dao.UserDao.{passwordResetTokenTable, passwordTable, userTable}
-import uk.gov.nationalarchives.tdr.api.core.graphql.PasswordInput
 
-import scala.util.Success
+import uk.gov.nationalarchives.tdr.api.core.db.{DbConnection}
+import uk.gov.nationalarchives.tdr.api.core.db.model.{Password, PasswordResetToken, TotpInfo, TotpScratchCode, User}
+import uk.gov.nationalarchives.tdr.api.core.db.dao.UserDao.{passwordResetTokenTable, passwordTable, totpInfoTable, totpScratchCodes, userTable}
+import uk.gov.nationalarchives.tdr.api.core.graphql.{PasswordInput, TotpInfoOutput, TotpScratchCodesOuput}
+
 
 class UserDao(implicit val executionContext: ExecutionContext) {
 
@@ -26,6 +25,8 @@ class UserDao(implicit val executionContext: ExecutionContext) {
   private val insertQuery = userTable returning userTable.map(_.id) into ((user, id) => user.copy(id = Some(id)))
   private val passwordInsertQuery = passwordTable returning passwordTable.map(_.key) into ((password, key) => password.copy(key = key))
   private val passwordResetInsertQuery = passwordResetTokenTable returning passwordResetTokenTable.map(_.email) into ((tokenReset, email) => tokenReset.copy(email = email))
+  private val totpInfoQuery = totpInfoTable returning totpInfoTable.map(_.id) into ((totpInfo, id) => totpInfo.copy(id = id))
+  private val totpScratchCodeQuery = totpScratchCodes returning totpScratchCodes.map(_.id) into ((totpScratchCodes, id) => totpScratchCodes.copy(id = id))
 
   def get(providerKey: String, providerId: String): Future[Option[User]] = {
     val result: FixedSqlStreamingAction[Seq[User], User, Effect.Read] = userTable.filter(u => u.providerKey === providerKey && u.providerId === providerId).result
@@ -56,12 +57,36 @@ class UserDao(implicit val executionContext: ExecutionContext) {
     db.run(passwordTable.filter(password => password.key === providerKey).delete)
   }
 
+  def findTotpInfo(providerKey: String) = {
+    db.run(totpInfoTable.filter(t => t.providerKey === providerKey).result.headOption)
+  }
+
+  def findTotpScratchCodes(infoId: Int) = {
+    db.run(totpScratchCodes.filter(t => t.totpInfoId === infoId).result)
+  }
+
+  def addTotpInfo(totpInfo: TotpInfo): Future[TotpInfo] = {
+    db.run(totpInfoQuery += totpInfo)
+  }
+
+  def addTotpScratchCodes(scratchCodes: Seq[TotpScratchCode]): Future[Seq[TotpScratchCode]] = {
+    db.run(totpScratchCodeQuery ++= scratchCodes)
+  }
+
+  def deleteTotpScratchCodes(providerKey: String) = {
+    db.run(sqlu"delete from totp_scratch_codes c using totp_info i where i.id = c.totp_info_id and i.provider_key = $providerKey;")
+  }
+
+  def deleteTotpInfo(providerKey: String) = {
+    db.run(totpInfoTable.filter(t => t.providerKey === providerKey).delete)
+  }
+
   def createOrUpdatePasswordResetToken(email: String): Future[Option[PasswordResetToken]] = {
     val token = UUID.randomUUID().toString
     val time = DateTimeFormatter.ISO_DATE_TIME.format(LocalDateTime.now().plusHours(4))
     val passwordResetToken = PasswordResetToken(email, token, time)
     db.run(passwordResetInsertQuery.insertOrUpdate(passwordResetToken))
-        .map(e => Option.apply(PasswordResetToken(email, token, time)) )
+      .map(e => Option.apply(PasswordResetToken(email, token, time)))
   }
 
   def getPasswordResetToken(email: String, token: String): Future[Seq[PasswordResetToken]] = {
@@ -108,9 +133,37 @@ class PasswordResetTokens(tag: Tag) extends Table[PasswordResetToken](tag, "pass
   override def * = (email, token, expiry).mapTo[PasswordResetToken]
 }
 
+class TotpInfos(tag: Tag) extends Table[TotpInfo](tag, "totp_info") {
+  def id = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
+
+  def providerKey = column[String]("provider_key")
+
+  def sharedKey = column[String]("shared_key")
+
+  override def * = (id, providerKey, sharedKey).mapTo[TotpInfo]
+}
+
+class TotpScratchCodes(tag: Tag) extends Table[TotpScratchCode](tag, "totp_scratch_codes") {
+  def id = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
+
+  def hasher = column[String]("hasher")
+
+  def password = column[String]("password")
+
+  def salt = column[Option[String]]("salt")
+
+  def totpInfoId = column[Int]("totp_info_id")
+
+  def totpInfo = foreignKey("totp_info_fk", totpInfoId, totpInfoTable)(_.id.get)
+
+  override def * = (id, hasher, password, salt, totpInfoId).mapTo[TotpScratchCode]
+}
+
 object UserDao {
   val userTable = TableQuery[Users]
   val passwordTable = TableQuery[Passwords]
   val passwordResetTokenTable = TableQuery[PasswordResetTokens]
+  val totpInfoTable = TableQuery[TotpInfos]
+  val totpScratchCodes = TableQuery[TotpScratchCodes]
 
 }
