@@ -35,7 +35,7 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
   }
 
   def create(name: String, seriesId: Int, creator: String, transferringBody: String): Future[Consignment] = {
-    val newConsignment = ConsignmentRow(None, name, seriesId, creator, transferringBody)
+    val newConsignment = ConsignmentRow(None, name, "NEW", seriesId, creator, transferringBody)
     val result = consignmentDao.create(newConsignment)
 
     result.flatMap(persistedConsignment =>
@@ -44,5 +44,10 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
           persistedConsignment.creator, persistedConsignment.transferringBody)
       )
     )
+  }
+
+  def confirmTransfer(consignmentId: Int): Future[Boolean] = {
+    consignmentDao.updateProgress(consignmentId, "CONFIRMED")
+      .map(_ => true)
   }
 }

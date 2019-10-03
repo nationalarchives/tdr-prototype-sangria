@@ -11,7 +11,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class ConsignmentDao(implicit val executionContext: ExecutionContext) {
 
-
   private val db = DbConnection.db
 
   private val insertQuery = consignments returning consignments.map(_.id) into ((consignment, id) => consignment.copy(id = Some(id)))
@@ -31,6 +30,12 @@ class ConsignmentDao(implicit val executionContext: ExecutionContext) {
   def create(consignment: ConsignmentRow): Future[ConsignmentRow] = {
     db.run(insertQuery += consignment)
   }
+
+  def updateProgress(consignmentId: Int, progress: String): Future[Unit] = {
+    val query = for {c <- consignments if c.id === consignmentId } yield c.progress
+    val updateAction = query.update(progress)
+    db.run(updateAction).map(_ => ())
+  }
 }
 
 object ConsignmentDao {
@@ -41,10 +46,11 @@ class ConsignmentsTable(tag: Tag) extends Table[ConsignmentRow](tag, "consignmen
 
   def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
+  def progress = column[String]("progress")
   def seriesId = column[Int]("series_id")
   def creator = column[String]("creator")
   def transferringBody = column[String] ("transferring_body")
   def series = foreignKey("consignment_series_fk", seriesId, seriesCollections)(_.id)
 
-  override def * : ProvenShape[ConsignmentRow] = (id.?, name, seriesId, creator, transferringBody).mapTo[ConsignmentRow]
+  override def * : ProvenShape[ConsignmentRow] = (id.?, name, progress, seriesId, creator, transferringBody).mapTo[ConsignmentRow]
 }
