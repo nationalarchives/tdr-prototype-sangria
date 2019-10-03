@@ -1,5 +1,6 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 
+import uk.gov.nationalarchives.tdr.api.core.db.backgroundtask.ConsignmentExport
 import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao
 import uk.gov.nationalarchives.tdr.api.core.db.model.ConsignmentRow
 import uk.gov.nationalarchives.tdr.api.core.graphql.{Consignment, Series}
@@ -48,6 +49,9 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
 
   def confirmTransfer(consignmentId: Int): Future[Boolean] = {
     consignmentDao.updateProgress(consignmentId, "CONFIRMED")
-      .map(_ => true)
+      .map(_ => {
+        ConsignmentExport.startExport(consignmentId)
+        true
+      })
   }
 }

@@ -97,6 +97,21 @@ To use the schema in Postman, see the [Postman guide to importing GraphQL schema
 
 [postman-import-graphql]: https://learning.getpostman.com/docs/postman/sending_api_requests/graphql/#importing-graphql-schemas
 
+### Trigger consignment export
+
+Since the consignment export runs in ECS, it has no way to access your local database. So by default, the API does not
+trigger the export task in development.
+
+If you want to enable it anyway (though it will try to export a consignment) set these environment variables when you
+run the API:
+
+- `EXPORT_TASK_ID`: the ID of the ECS task, e.g. `tdr-consignment-export-dev`
+- `EXPORT_CLUSTER_ARN`: the ARN of the ECS cluster
+- `EXPORT_SUBNET_ID`: the ID of the subnet in the VPC to run the task in
+- `EXPORT_SECURITY_GROUP_ID`: the ID of the security group that the task should use. It must have permission to pull the
+  Docker image, and it must be in same VPC as the subnet you specified earlier
+- `EXPORT_CONTAINER_ID` the ID of the container in ECS, e.g. `consignment-export-dev`
+
 ## Deployment
 
 ### Infrastructure
