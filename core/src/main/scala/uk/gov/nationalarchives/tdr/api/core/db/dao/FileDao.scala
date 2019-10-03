@@ -7,7 +7,7 @@ import java.util.UUID
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{TableQuery, Tag}
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
-import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
+import uk.gov.nationalarchives.tdr.api.core.db.Tables._
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao.files
 import uk.gov.nationalarchives.tdr.api.core.db.model.FileRow
 import uk.gov.nationalarchives.tdr.api.core.graphql.CreateFileInput
@@ -57,7 +57,7 @@ class FileTable(tag: Tag) extends Table[FileRow](tag, "file") {
   def fileSize = column[Int]("file_size")
   def lastModifiedDate = column[Instant]("last_modified_date")
   def fileName = column[String]("file_name")
-  def consignment = foreignKey("file_consignment_fk", consignmentId, consignments)(_.id)
+  def consignment = foreignKey("file_consignment_fk", consignmentId, Consignments)(_.id)
 
   //mapTo function displaying error in Intellij but not causing any problems with compilation and running
   //Likely a bug with Intellij error detection

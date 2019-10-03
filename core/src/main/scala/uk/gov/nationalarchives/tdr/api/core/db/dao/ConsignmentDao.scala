@@ -1,44 +1,29 @@
 package uk.gov.nationalarchives.tdr.api.core.db.dao
 
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.{ProvenShape, TableQuery}
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
-import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao.consignments
-import uk.gov.nationalarchives.tdr.api.core.db.dao.SeriesDao.seriesCollections
-import uk.gov.nationalarchives.tdr.api.core.db.model.ConsignmentRow
+import uk.gov.nationalarchives.tdr.api.core.db.Tables._
+
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class ConsignmentDao(implicit val executionContext: ExecutionContext) {
   private val db = DbConnection.db
 
-  private val insertQuery = consignments returning consignments.map(_.id) into ((consignment, id) => consignment.copy(id = Some(id)))
+  private val insertQuery = Consignments returning Consignments.map(_.id) into ((Consignments, id) => Consignments.copy(id =id))
 
-  def all: Future[Seq[ConsignmentRow]] = {
-    db.run(consignments.result)
+  def all: Future[Seq[ConsignmentsRow]] = {
+    db.run(Consignments.result)
   }
 
-  def get(id: Int): Future[Option[ConsignmentRow]] = {
-    db.run(consignments.filter(_.id === id).result).map(_.headOption)
+  def get(id: Int): Future[Option[ConsignmentsRow]] = {
+    db.run(Consignments.filter(_.id === id).result).map(_.headOption)
   }
 
-  def create(consignment: ConsignmentRow): Future[ConsignmentRow] = {
+  def create(consignment: ConsignmentsRow): Future[ConsignmentsRow] = {
+
     db.run(insertQuery += consignment)
   }
 }
 
-object ConsignmentDao {
-  val consignments = TableQuery[ConsignmentsTable]
-}
 
-class ConsignmentsTable(tag: Tag) extends Table[ConsignmentRow](tag, "consignments") {
-
-  def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
-  def name = column[String]("name")
-  def seriesId = column[Int]("series_id")
-  def creator = column[String]("creator")
-  def transferringBody = column[String] ("transferring_body")
-  def series = foreignKey("consignment_series_fk", seriesId, seriesCollections)(_.id)
-
-  override def * : ProvenShape[ConsignmentRow] = (id.?, name, seriesId, creator, transferringBody).mapTo[ConsignmentRow]
-}

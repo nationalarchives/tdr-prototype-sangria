@@ -9,6 +9,8 @@ enablePlugins(GraphQLSchemaPlugin)
 
 graphqlSchemaSnippet := "uk.gov.nationalarchives.tdr.api.core.graphql.GraphQlTypes.schema"
 
+val slickVersion = "3.3.2"
+
 lazy val core = (project in file("core"))
   .settings(
     name := "TDR GraphQL API core",
@@ -16,14 +18,33 @@ lazy val core = (project in file("core"))
     libraryDependencies ++= Seq(
       "org.sangria-graphql" %% "sangria" % "1.4.2",
       "org.sangria-graphql" %% "sangria-circe" % "1.2.1",
-      "com.typesafe.slick" %% "slick" % "3.3.1",
+      "com.typesafe.slick" %% "slick"  % slickVersion,
       "org.slf4j" % "slf4j-nop" % "1.7.26",
-      "com.typesafe.slick" %% "slick-hikaricp" % "3.3.1",
-      "org.postgresql" % "postgresql" % "42.2.6",
+      "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
+      "com.typesafe.slick" %% "slick-codegen"  % slickVersion,
+       "org.postgresql" % "postgresql" % "42.2.6",
       "software.amazon.awssdk" % "ssm" % "2.7.23",
       "io.circe" %% "circe-generic" % "0.9.3",
-    )
+       )
   )
+
+lazy val slick = taskKey[Seq[File]]("gen-tables")
+slick := {
+  val dir = sourceManaged.value
+  val cp = (dependencyClasspath in Compile).value
+  val r = (runner in Compile).value
+  val s = streams.value
+  val url = "jdbc:postgresql://localhost:5432/tdrapi"
+  val jdbcDriver = "org.postgresql.Driver"
+  val slickDriver = "slick.jdbc.PostgresProfile"
+  val user = "postgres"
+  val password = "mysecretpassword"
+  val pkg = "uk.gov.nationalarchives.tdr.api.core.db"
+  val outputDir = (dir / "slick").getPath // place generated files in sbt's managed sources folder
+  r.run("slick.codegen.SourceCodeGenerator", cp.files, Array(slickDriver, jdbcDriver, url, outputDir, pkg, user, password),  s.log).failed foreach (sys error _.getMessage)
+  val fname = outputDir + "/tdrapi/Tables.scala"
+  Seq(file(fname))
+}
 
 lazy val root = (project in file("."))
   .settings(
@@ -43,7 +64,8 @@ lazy val root = (project in file("."))
       "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion     % Test,
       "org.scalatest"     %% "scalatest"            % "3.0.5"         % Test,
     ),
- assemblyMergeStrategy in assembly := {
+
+    assemblyMergeStrategy in assembly := {
         case x if x.contains("io.netty.versions.properties") => MergeStrategy.discard
         case x =>
           val oldStrategy = (assemblyMergeStrategy in assembly).value
