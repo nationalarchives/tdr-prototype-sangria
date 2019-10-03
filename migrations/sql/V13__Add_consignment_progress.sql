@@ -1,0 +1,2 @@
+ALTER TABLE consignments
+    ADD COLUMN progress VARCHAR (50) NOT NULL DEFAULT ('NEW');
