@@ -303,6 +303,12 @@ object GraphQlTypes {
       OptionType(PasswordResetType),
       arguments = List(EmailArg),
       resolve = ctx => ctx.ctx.users.createResetPasswordToken(ctx.arg(EmailArg))
+    ),
+    Field(
+      "confirmTransfer",
+      BooleanType,
+      arguments = List(ConsignmentIdArg),
+      resolve = ctx => ctx.ctx.consignments.confirmTransfer(ctx.arg(ConsignmentIdArg))
     )
   ))
 

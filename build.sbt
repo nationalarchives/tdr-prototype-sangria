@@ -4,6 +4,7 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 lazy val akkaHttpVersion = "10.1.9"
 lazy val akkaVersion    = "2.6.0-M5"
+lazy val awsSdkVersion = "2.9.11"
 
 enablePlugins(GraphQLSchemaPlugin)
 
@@ -20,7 +21,8 @@ lazy val core = (project in file("core"))
       "org.slf4j" % "slf4j-nop" % "1.7.26",
       "com.typesafe.slick" %% "slick-hikaricp" % "3.3.1",
       "org.postgresql" % "postgresql" % "42.2.6",
-      "software.amazon.awssdk" % "ssm" % "2.7.23",
+      "software.amazon.awssdk" % "ecs" % awsSdkVersion,
+      "software.amazon.awssdk" % "ssm" % awsSdkVersion,
       "io.circe" %% "circe-generic" % "0.9.3",
     )
   )
