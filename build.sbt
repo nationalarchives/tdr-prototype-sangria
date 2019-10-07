@@ -10,6 +10,13 @@ enablePlugins(GraphQLSchemaPlugin)
 
 graphqlSchemaSnippet := "uk.gov.nationalarchives.tdr.api.core.graphql.GraphQlTypes.schema"
 
+val awsSdkConfigFiles = Set(
+  "customization.config",
+  "examples-1.json",
+  "paginators-1.json",
+  "service-2.json"
+)
+
 lazy val core = (project in file("core"))
   .settings(
     name := "TDR GraphQL API core",
@@ -47,6 +54,8 @@ lazy val root = (project in file("."))
     ),
  assemblyMergeStrategy in assembly := {
         case x if x.contains("io.netty.versions.properties") => MergeStrategy.discard
+        case PathList(ps@_*) if awsSdkConfigFiles.contains(ps.last) =>
+          MergeStrategy.discard
         case x =>
           val oldStrategy = (assemblyMergeStrategy in assembly).value
           oldStrategy(x)
