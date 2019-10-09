@@ -323,7 +323,7 @@ case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: S
 
 case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Instant, fileName: String)
 case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
-case class FileCheckStatus(totalComplete: Int, totalFiles: Int, error: Boolean)
+case class FileCheckStatus(percentage: Int, totalFiles: Int, virusErrors: List[String], checksumErrors: List[String])
 case class ConsignmentInput(name: String, series: Series, creator: String, transferringBody:String)
 case class User(id: Int, firstName: String, lastName: String, email: String, providerId: String, providerKey: String)
 case class UserInput(firstName: String, lastName: String, email: String, providerId: String)
