@@ -23,7 +23,7 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
   private val insert = fileStatuses returning fileStatuses.map(_.id) into ((fileStatus, id) => fileStatus.copy(id = Some(id)))
 
   def create(fileId: UUID, clientSideChecksum: String): Future[FileStatusRow] = {
-    val fileStatus = FileStatusRow(None, false, fileId, clientSideChecksum, "", "")
+    val fileStatus = FileStatusRow(None, fileFormatVerified = false, fileId = fileId, clientSideChecksum = clientSideChecksum, serverSideChecksum = "", antivirusStatus = "")
     db.run(insert += fileStatus)
   }
 
@@ -39,54 +39,79 @@ class FileStatusDao(implicit val executionContext: ExecutionContext) {
     db.run(fileStatuses.filter(_.fileId === fileId).result).map(_.headOption)
   }
 
-  case class FileCheck(clientChecksum: String, serverChecksum: String, virusStatus: String, pronomId: Option[String])
+  case class FileCheck(clientChecksum: String, serverChecksum: String, virusStatus: String, pronomId: Option[String], fileName: String)
 
-  case class FileStatusCount(completeCount: Int, error: Boolean)
 
-  def getFileCheckStatus(consignmentId: Int) = {
+  case class FileStatusCount(completeCount: Int, virusErrors: List[String], checksumErrors: List[String])
+
+  def getFileCheckStatus(consignmentId: Int): Future[FileCheckStatus] = {
     val query = for {
       ((c, fs), ff) <- files join fileStatuses on (_.id === _.fileId) filter(_._1.consignmentId === consignmentId) joinLeft fileFormats on (_._2.fileId === _.fileId)
-    } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.map(_.pronomId), fs.fileId, c.consignmentId)
+    } yield (fs.clientSideChecksum, fs.serverSideChecksum, fs.antivirus_status, ff.map(_.pronomId), c.path)
 
 
     def boolToInt(b: Boolean): Int = if (b) 1 else 0
 
+
+
     println(query.result.statements)
     val result = db.run(query.result)
 
-    val checkList: Future[Seq[FileCheck]] = result.map(_.map(f => FileCheck(f._1, f._2, f._3, f._4)))
-
+    val checkList: Future[Seq[FileCheck]] = result.map(_.map(f => FileCheck(f._1, f._2, f._3, f._4, f._5)))
 
     val fn: (FileStatusCount, FileCheck) => FileStatusCount = (acc, s) => {
-      val isCompleteCount = acc.completeCount + boolToInt(s.serverChecksum.length > 0 && s.virusStatus.length > 0 && s.pronomId.getOrElse("").length > 0)
-      val error = acc.error || (s.virusStatus != "OK" && s.virusStatus.nonEmpty) || (s.serverChecksum != s.clientChecksum && !s.serverChecksum.isEmpty)
-      FileStatusCount(isCompleteCount, error)
+      val isCompleteCount = acc.completeCount + boolToInt(s.serverChecksum.length > 0) + boolToInt(s.virusStatus.length > 0) + boolToInt(s.pronomId.getOrElse("").length > 0)
+
+      val hasVirusError = s.virusStatus != "OK" && s.virusStatus.nonEmpty
+      val hasChecksumError: Boolean =  s.serverChecksum != s.clientChecksum && s.serverChecksum.nonEmpty
+
+      val getErrors: (Boolean, String) => List[String] = (errorCheck, fileName) => {
+        if (errorCheck) {
+          List(fileName)
+        } else {
+          List()
+        }
+      }
+
+      s match {
+        case _ if hasVirusError || hasChecksumError =>
+          FileStatusCount(isCompleteCount, acc.virusErrors ::: getErrors(hasVirusError, s.fileName),
+            acc.checksumErrors ::: getErrors(hasChecksumError, s.fileName))
+        case _ => FileStatusCount(isCompleteCount, acc.virusErrors, acc.checksumErrors)
+      }
     }
-    val results: Future[FileStatusCount] = checkList.map(_.foldLeft(FileStatusCount(0, false))(fn))
+    val results: Future[FileStatusCount] = checkList.map(_.foldLeft(FileStatusCount(0, List(), List()))(fn))
     results.onComplete(println(_))
 
     for {
       r <- result
       fsc <- results
     } yield {
-      FileCheckStatus(fsc.completeCount, r.length, fsc.error)
+      val percentage: Int = r.length match {
+        case 0 => throw new RuntimeException("No files found")
+        case l =>((fsc.completeCount.toDouble / (l * 3).toDouble) * 100).toInt match {
+          case i if i < 5 => 5
+          case i => i
+        }
+      }
+      FileCheckStatus(percentage, r.length, fsc.virusErrors, fsc.checksumErrors)
     }
 
   }
 
-  def updateServerSideChecksum(fileId: UUID, checksum: String) = {
+  def updateServerSideChecksum(fileId: UUID, checksum: String): Future[Int] = {
     val q = for {c <- fileStatuses if c.fileId === fileId} yield c.serverSideChecksum
     val updateAction = q.update(checksum)
     db.run(updateAction)
   }
 
-  def updateClientSideChecksum(fileId: UUID, checksum: String) = {
+  def updateClientSideChecksum(fileId: UUID, checksum: String): Future[Int] = {
     val q = for {c <- fileStatuses if c.fileId === fileId} yield c.clientSideChecksum
     val updateAction = q.update(checksum)
     db.run(updateAction)
   }
 
-  def updateVirusCheckStatus(fileId: UUID, virusCheckStatus: String) = {
+  def updateVirusCheckStatus(fileId: UUID, virusCheckStatus: String): Future[Int] = {
     val q = for {c <- fileStatuses if c.fileId === fileId} yield c.antivirus_status
     val updateAction = q.update(virusCheckStatus)
     db.run(updateAction)
