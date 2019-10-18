@@ -54,7 +54,7 @@ class FileTable(tag: Tag) extends Table[FileRow](tag, "file") {
   def id = column[UUID]("id", O.PrimaryKey, O.AutoInc)
   def path = column[String]("path")
   def consignmentId = column[Int]("consignment_id")
-  def fileSize = column[Int]("file_size")
+  def fileSize = column[Long]("file_size")
   def lastModifiedDate = column[Instant]("last_modified_date")
   def fileName = column[String]("file_name")
   def consignment = foreignKey("file_consignment_fk", consignmentId, consignments)(_.id)
