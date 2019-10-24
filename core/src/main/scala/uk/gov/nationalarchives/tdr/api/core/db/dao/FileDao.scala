@@ -15,6 +15,8 @@ import uk.gov.nationalarchives.tdr.api.core.graphql.CreateFileInput
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileDao(implicit val executionContext: ExecutionContext) {
+  case class PaginatedResult[T](totalCount: Int, entities: List[T])
+
   private val db = DbConnection.db
 
   private val insertQuery = files returning files.map(_.id) into ((file, id) => file.copy(id = Some(id)))
@@ -29,6 +31,18 @@ class FileDao(implicit val executionContext: ExecutionContext) {
 
   def getByConsignment(consignmentId: Int): Future[Seq[FileRow]] = {
     db.run(files.filter(_.consignmentId === consignmentId).result)
+  }
+
+  def getByConsignmentPaginated(consignmentId: Int, limit: Int, offset: Int): Future[PaginatedResult[FileRow]] = {
+    db.run {
+      for {
+        paginatedResult <- files.filter(_.consignmentId === consignmentId).drop(offset).take(limit).result
+        numberOfFiles <- files.length.result
+      } yield PaginatedResult(
+        totalCount = numberOfFiles,
+        entities = paginatedResult.toList
+      )
+    }
   }
 
   def create(file: FileRow): Future[FileRow] = {

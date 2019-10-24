@@ -9,9 +9,11 @@ import io.circe.generic.auto._
 import sangria.ast.StringValue
 import sangria.macros.derive._
 import sangria.marshalling.circe._
-import sangria.schema.{Argument, BooleanType, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
+import sangria.relay._
+import sangria.schema.{Argument, BooleanType, DeferredValue, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
 import sangria.validation.ValueCoercionViolation
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{Failure, Success, Try}
 
 object GraphQlTypes {
@@ -74,7 +76,6 @@ object GraphQlTypes {
   implicit private val TotpScratchCodesInputType: InputObjectType[TotpScratchCodesInput] = deriveInputObjectType[TotpScratchCodesInput]()
   implicit private val TotpInfoInputType: InputObjectType[TotpInfoInput] = deriveInputObjectType[TotpInfoInput]()
 
-
   implicit private val FileType: ObjectType[Unit, File] = ObjectType(
     "File",
     fields[Unit, File](
@@ -92,6 +93,16 @@ object GraphQlTypes {
       Field("fileName", StringType, resolve = _.value.fileName),
     )
   )
+
+  implicit private val ConnectionDefinition(_, filesConnections) =
+    Connection.definition[RequestContext, Connection, File](
+      name = "File",
+      nodeType = FileType
+    )
+
+  private val LimitArg = Argument("limit", IntType)
+  private val AfterArg = Argument("after", StringType)
+
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = ObjectType(
     "Consignment",
     fields[Unit, Consignment](
@@ -104,6 +115,24 @@ object GraphQlTypes {
         "files",
         ListType(FileType),
         resolve = context => DeferConsignmentFiles(context.value.id)
+      ),
+      Field(
+        "fileConnections",
+        filesConnections,
+        arguments = List(LimitArg, AfterArg),
+        resolve = ctx => {
+          DeferredValue(DeferConsignmentFiles(ctx.value.id)).map(
+            response => {
+              Connection.connectionFromSeq(
+                response,
+                ConnectionArgs(
+                  first = Some(ctx.args.arg("limit")),
+                  after = Option(ctx.args.arg("after"))
+                )
+              )
+            }
+          )
+        }
       )
     )
   )
@@ -334,4 +363,3 @@ case class TotpInfoOutput(id: Int, providerKey: String, sharedKey: String, scrat
 case class TotpScratchCodesOuput(id: Int, hasher: String, password: String, salt: Option[String])
 case class TotpInfoInput(providerKey: String, sharedKey: String, scratchCodes: Seq[TotpScratchCodesInput])
 case class TotpScratchCodesInput(hasher: String, password: String, salt: Option[String])
-

@@ -17,6 +17,6 @@ class DeferredResolver extends sangria.execution.deferred.DeferredResolver[Reque
   }
 }
 
-case class DeferConsignmentFiles(consignmentId: Int) extends Deferred[List[File]]
+case class DeferConsignmentFiles(consignmentId: Int) extends Deferred[Vector[File]]
 case class DeferScratchCodes(infoId: Int) extends Deferred[List[TotpScratchCodesOuput]]
 case class DeferFileStatus(fileId: UUID) extends Deferred[FileStatus]

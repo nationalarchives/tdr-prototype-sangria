@@ -77,7 +77,5 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       fileStatus <- fileStatusService.create(persistedFile.id.get, input.clientSideChecksum)
     } yield
       getFileReturnValue(persistedFile, fileStatus)
-
-
   }
 }
