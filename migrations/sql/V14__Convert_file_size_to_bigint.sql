@@ -1,0 +1,2 @@
+ALTER TABLE file
+    ALTER COLUMN file_size TYPE BIGINT;
