@@ -1,10 +1,11 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 import java.util.UUID
 
+import sangria.relay.util.Base64
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
 import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatusRow}
 import uk.gov.nationalarchives.tdr.api.core.graphql
-import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, File, FileStatus}
+import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, File, FileEdge, FileStatus}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,6 +30,22 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
 
   def getByConsignment(consignmentId: Int): Future[Seq[File]] = {
     fileDao.getByConsignment(consignmentId).flatMap(fileRows => mapFileRows(fileRows))
+  }
+
+  def getOffsetPagination(consignmentId: Int, limit: Int, offset: Int): Future[(Int, Seq[FileEdge])] = {
+    for {
+      response <- fileDao.getOffsetPagination(consignmentId, limit, offset)
+      paginatedFiles <- mapToEdges(response)
+      count <- fileDao.getNumberOfFilesByConsignment(consignmentId)
+    } yield (count, paginatedFiles)
+  }
+
+  def getKeySetPagination(consignmentId: Int, limit: Int, after: String): Future[(Int, Seq[FileEdge])] = {
+      for {
+        response <- fileDao.getKeySetPagination(consignmentId, limit, after)
+        count <- fileDao.getNumberOfFilesByConsignment(consignmentId)
+        paginatedFiles <- mapToEdges(response)
+      } yield (count, paginatedFiles)
   }
 
   def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {
@@ -57,6 +74,12 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       Option.apply(""),
       r.fileSize,
       r.lastModifiedDate, r.fileName)
+  }
+
+  private def mapToEdges(fileRows: Seq[FileRow]) = {
+    mapFileRows(fileRows).map(fs => {
+      fs.map(f => FileEdge(f, Base64.encode(f.path)))
+    })
   }
 
   private def mapFileRows(fileRows: Seq[FileRow]): Future[Seq[File]] = {

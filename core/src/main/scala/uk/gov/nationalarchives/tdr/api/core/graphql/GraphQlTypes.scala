@@ -10,6 +10,7 @@ import sangria.ast.StringValue
 import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.relay._
+import sangria.relay.util.Base64
 import sangria.schema.{Argument, BooleanType, DeferredValue, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
 import sangria.validation.ValueCoercionViolation
 
@@ -75,6 +76,7 @@ object GraphQlTypes {
   implicit private val TotpType: ObjectType[Unit, TotpScratchCodesOuput] = deriveObjectType[Unit, TotpScratchCodesOuput]()
   implicit private val TotpScratchCodesInputType: InputObjectType[TotpScratchCodesInput] = deriveInputObjectType[TotpScratchCodesInput]()
   implicit private val TotpInfoInputType: InputObjectType[TotpInfoInput] = deriveInputObjectType[TotpInfoInput]()
+  implicit private val FileEdgeType: ObjectType[Unit, FileEdge] = deriveObjectType[Unit, FileEdge]()
 
   implicit private val FileType: ObjectType[Unit, File] = ObjectType(
     "File",
@@ -100,8 +102,22 @@ object GraphQlTypes {
       nodeType = FileType
     )
 
+  implicit private val ConnectionDefinition(_, keySetPaginationConnection) =
+    Connection.definitionWithEdge[RequestContext, Connection, File, FileEdge](
+      name = "File",
+      nodeType = FileType
+    )
+
   private val LimitArg = Argument("limit", IntType)
   private val AfterArg = Argument("after", StringType)
+  private val PageNumberArg = Argument("pageNumber", IntType)
+
+  private def decode(value: String) = {
+    Base64.decode(value) match {
+      case Some(s) => s
+      case None => ""
+    }
+  }
 
   implicit private val ConsignmentType: ObjectType[Unit, Consignment] = ObjectType(
     "Consignment",
@@ -117,18 +133,67 @@ object GraphQlTypes {
         resolve = context => DeferConsignmentFiles(context.value.id)
       ),
       Field(
-        "fileConnections",
+        "offsetConnections",
         filesConnections,
-        arguments = List(LimitArg, AfterArg),
+        arguments = List(LimitArg, PageNumberArg),
         resolve = ctx => {
-          DeferredValue(DeferConsignmentFiles(ctx.value.id)).map(
+          val limit: Int = ctx.args.arg("limit")
+          val currentPage: Int = ctx.args.arg("pageNumber")
+          val offset: Int = (currentPage - 1) * limit
+          DeferredValue(DeferOffsetPagination(
+            ctx.value.id,
+            limit,
+            offset
+          )).map(
             response => {
-              Connection.connectionFromSeq(
-                response,
-                ConnectionArgs(
-                  first = Some(ctx.args.arg("limit")),
-                  after = Option(ctx.args.arg("after"))
-                )
+              val edges = response._2
+              val totalCount = response._1
+              val totalPages = math.ceil(totalCount.toDouble / limit.toDouble)
+              val firstEdge = edges.headOption
+              val lastEdge = edges.lastOption
+
+              DefaultConnection(
+                PageInfo(
+                  startCursor = firstEdge.map(_.cursor),
+                  endCursor = lastEdge.map(_.cursor),
+                  hasNextPage = currentPage < totalPages,
+                  hasPreviousPage = 1 < currentPage
+                ),
+                edges
+              )
+            }
+          )
+        }
+      ),
+      Field(
+        "keySetConnections",
+        filesConnections,
+        arguments = List(LimitArg, AfterArg, PageNumberArg),
+        resolve = ctx => {
+
+          val limit: Int = ctx.args.arg("limit")
+          val decodedCursor = decode(ctx.args.arg("after"))
+
+          DeferredValue(DeferKeySetPagination(
+              ctx.value.id,
+              limit,
+              decodedCursor)).map(
+            response => {
+              val currentPage: Int = ctx.args.arg("pageNumber")
+              val edges = response._2
+              val totalCount = response._1
+              val totalPage = math.ceil(totalCount.toDouble / limit.toDouble)
+              val firstEdge = edges.headOption
+              val lastEdge = edges.lastOption
+
+              DefaultConnection(
+                PageInfo(
+                  startCursor = firstEdge.map(_.cursor),
+                  endCursor = lastEdge.map(_.cursor),
+                  hasNextPage = currentPage < totalPage.toInt,
+                  hasPreviousPage = 1 < currentPage
+                ),
+                edges
               )
             }
           )
@@ -363,3 +428,5 @@ case class TotpInfoOutput(id: Int, providerKey: String, sharedKey: String, scrat
 case class TotpScratchCodesOuput(id: Int, hasher: String, password: String, salt: Option[String])
 case class TotpInfoInput(providerKey: String, sharedKey: String, scratchCodes: Seq[TotpScratchCodesInput])
 case class TotpScratchCodesInput(hasher: String, password: String, salt: Option[String])
+
+case class FileEdge(node: File, cursor: String) extends Edge[File]
