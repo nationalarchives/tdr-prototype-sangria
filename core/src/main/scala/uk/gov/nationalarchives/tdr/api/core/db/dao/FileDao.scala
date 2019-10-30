@@ -39,11 +39,6 @@ class FileDao(implicit val executionContext: ExecutionContext) {
     db.run(files.filter(_.consignmentId === consignmentId).result)
   }
 
-  /*
-  * This is sub-optimal as need to get the full results for each consignment to return the total count
-  * Total count needed to calculate whether more pages available
-  * Need to store the total number of files in the consignment table
-  * */
   def getKeySetPagination(consignmentId: Int, limit: Int, after: String): Future[Seq[FileRow]] = {
     val criteriaConsignment = Option(consignmentId)
     val criteriaAfter = Option(after)

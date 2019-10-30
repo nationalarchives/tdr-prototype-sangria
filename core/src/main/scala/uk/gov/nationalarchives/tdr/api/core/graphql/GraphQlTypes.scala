@@ -102,12 +102,6 @@ object GraphQlTypes {
       nodeType = FileType
     )
 
-  implicit private val ConnectionDefinition(_, keySetPaginationConnection) =
-    Connection.definitionWithEdge[RequestContext, Connection, File, FileEdge](
-      name = "File",
-      nodeType = FileType
-    )
-
   private val LimitArg = Argument("limit", IntType)
   private val AfterArg = Argument("after", StringType)
   private val PageNumberArg = Argument("pageNumber", IntType)
