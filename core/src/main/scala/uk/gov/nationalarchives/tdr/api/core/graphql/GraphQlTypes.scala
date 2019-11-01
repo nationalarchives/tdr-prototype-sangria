@@ -122,11 +122,6 @@ object GraphQlTypes {
       Field("transferringBody", StringType, resolve = _.value.transferringBody),
       Field("series", SeriesType, resolve = _.value.series),
       Field(
-        "files",
-        ListType(FileType),
-        resolve = context => DeferConsignmentFiles(context.value.id)
-      ),
-      Field(
         "offsetConnections",
         filesConnections,
         arguments = List(LimitArg, PageNumberArg),
