@@ -11,7 +11,7 @@ import sangria.macros.derive._
 import sangria.marshalling.circe._
 import sangria.relay._
 import sangria.relay.util.Base64
-import sangria.schema.{Argument, BooleanType, DeferredValue, Field, InputObjectType, IntType, ListInputType, ListType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
+import sangria.schema.{Argument, BooleanType, DeferredValue, Field, InputObjectType, IntType, ListInputType, ListType, LongType, ObjectType, OptionType, ScalarType, Schema, StringType, fields}
 import sangria.validation.ValueCoercionViolation
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -90,7 +90,7 @@ object GraphQlTypes {
         resolve = context => DeferFileStatus(context.value.id)
       ),
       Field("pronomId", OptionType(StringType), resolve = _.value.pronomId),
-      Field("fileSize", IntType, resolve = _.value.fileSize),
+      Field("fileSize", LongType, resolve = _.value.fileSize),
       Field("lastModifiedDate", InstantType, resolve = _.value.lastModifiedDate),
       Field("fileName", StringType, resolve = _.value.fileName),
     )
@@ -401,8 +401,8 @@ case class Consignment(id: Int, name: String, series: Series, creator: String, t
 case class FileStatus(id: Int, clientSideChecksum: String, serverSideChecksum: String, fileFormatVerified: Boolean, fileId: UUID, antivirusStatus: String)
 //TODO: need to define a custom scalar date type to store dates in DB
 
-case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Int, lastModifiedDate: Instant, fileName: String)
-case class CreateFileInput(path: String, consignmentId: Int, fileSize: Int, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
+case class File(id: UUID, path: String, consignmentId: Int, fileStatus: FileStatus, pronomId: Option[String], fileSize: Long, lastModifiedDate: Instant, fileName: String)
+case class CreateFileInput(path: String, consignmentId: Int, fileSize: Long, lastModifiedDate: Instant, fileName: String, clientSideChecksum: String)
 case class FileCheckStatus(percentage: Int, totalFiles: Int, virusErrors: List[String], checksumErrors: List[String])
 case class ConsignmentInput(name: String, series: Series, creator: String, transferringBody:String)
 case class User(id: Int, firstName: String, lastName: String, email: String, providerId: String, providerKey: String)
