@@ -103,13 +103,13 @@ object GraphQlTypes {
     )
 
   private val LimitArg = Argument("limit", IntType)
-  private val AfterArg = Argument("after", StringType)
+  private val CurrentCursorArg = Argument("currentCursor", StringType)
   private val PageNumberArg = Argument("pageNumber", IntType)
 
   private def decode(value: String) = {
     Base64.decode(value) match {
       case Some(s) => s
-      case None => ""
+      case None => throw new Exception("Invalid cursor")
     }
   }
 
@@ -134,7 +134,7 @@ object GraphQlTypes {
           val limit: Int = ctx.args.arg("limit")
           val currentPage: Int = ctx.args.arg("pageNumber")
           val offset: Int = (currentPage - 1) * limit
-          DeferredValue(DeferOffsetPagination(
+          DeferredValue(DeferConsignmentFilesOffsetPagination(
             ctx.value.id,
             limit,
             offset
@@ -162,30 +162,27 @@ object GraphQlTypes {
       Field(
         "keySetConnections",
         filesConnections,
-        arguments = List(LimitArg, AfterArg, PageNumberArg),
+        arguments = List(LimitArg, CurrentCursorArg),
         resolve = ctx => {
 
           val limit: Int = ctx.args.arg("limit")
-          val decodedCursor = decode(ctx.args.arg("after"))
+          val decodedCursor = decode(ctx.args.arg("currentCursor"))
 
-          DeferredValue(DeferKeySetPagination(
+          DeferredValue(DeferConsignmentFilesKeySetPagination(
               ctx.value.id,
               limit,
               decodedCursor)).map(
             response => {
-              val currentPage: Int = ctx.args.arg("pageNumber")
               val edges = response._2
-              val totalCount = response._1
-              val totalPage = math.ceil(totalCount.toDouble / limit.toDouble)
+              val endCursor: String = response._1
               val firstEdge = edges.headOption
-              val lastEdge = edges.lastOption
 
               DefaultConnection(
                 PageInfo(
                   startCursor = firstEdge.map(_.cursor),
-                  endCursor = lastEdge.map(_.cursor),
-                  hasNextPage = currentPage < totalPage.toInt,
-                  hasPreviousPage = 1 < currentPage
+                  endCursor = Option(endCursor),
+                  hasNextPage = if(endCursor.isEmpty) false else true,
+                  hasPreviousPage = if(decodedCursor.isEmpty) false else true
                 ),
                 edges
               )

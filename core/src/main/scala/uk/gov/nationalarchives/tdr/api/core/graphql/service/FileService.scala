@@ -40,12 +40,13 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     } yield (count, paginatedFiles)
   }
 
-  def getKeySetPagination(consignmentId: Int, limit: Int, after: String): Future[(Int, Seq[FileEdge])] = {
+  def getKeySetPagination(consignmentId: Int, limit: Int, after: String): Future[(String, Seq[FileEdge])] = {
       for {
-        response <- fileDao.getKeySetPagination(consignmentId, limit, after)
-        count <- fileDao.getNumberOfFilesByConsignment(consignmentId)
-        paginatedFiles <- mapToEdges(response)
-      } yield (count, paginatedFiles)
+        response <- fileDao.getKeySetPagination(consignmentId, limit + 1, after)
+        nextCursor = Base64.encode(response.last.path)
+        //count <- fileDao.getNumberOfFilesByConsignment(consignmentId)
+        paginatedFiles <- mapToEdges(response.dropRight(1))
+      } yield (nextCursor, paginatedFiles)
   }
 
   def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {

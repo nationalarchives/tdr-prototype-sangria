@@ -21,8 +21,6 @@ class FileDao(implicit val executionContext: ExecutionContext) {
 
   private val insertQuery = files returning files.map(_.id) into ((file, id) => file.copy(id = Some(id)))
 
-  case class FileDbRow(path: String, consignmentId: Int, fileSize: Int, fileName: String, id: Option[UUID] = None, lastModifiedDate: Timestamp)
-
   def all: Future[Seq[FileRow]] = {
     db.run(files.result)
   }
@@ -43,15 +41,15 @@ class FileDao(implicit val executionContext: ExecutionContext) {
     val criteriaConsignment = Option(consignmentId)
     val criteriaAfter = Option(after)
 
-    val cns = files.filter { f =>
+    val consignment = files.filter { f =>
       List(
         criteriaConsignment.map(f.consignmentId === _),
-        criteriaAfter.map(f.path > _))
+        criteriaAfter.map(f.path >= _))
       .collect({case Some(criteria) => criteria})
       .reduceLeftOption(_ && _).getOrElse(true: Rep[Boolean])
     }.sortBy(_.path).take(limit)
 
-    db.run(cns.result)
+    db.run(consignment.result)
   }
 
   def getOffsetPagination(consignmentId: Int, limit: Int, offset: Int): Future[Seq[FileRow]] = {
