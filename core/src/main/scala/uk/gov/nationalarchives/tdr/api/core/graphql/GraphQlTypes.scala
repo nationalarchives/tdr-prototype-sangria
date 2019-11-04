@@ -161,23 +161,23 @@ object GraphQlTypes {
         resolve = ctx => {
 
           val limit: Int = ctx.args.arg("limit")
-          val decodedCursor = decode(ctx.args.arg("currentCursor"))
+          val currentCursor: String = ctx.args.arg("currentCursor")
+          val decodedCurrentCursor = decode(currentCursor)
 
           DeferredValue(DeferConsignmentFilesKeySetPagination(
               ctx.value.id,
               limit,
-              decodedCursor)).map(
+              decodedCurrentCursor)).map(
             response => {
+              val nextCursor = response._1
               val edges = response._2
-              val endCursor: String = response._1
               val firstEdge = edges.headOption
-
               DefaultConnection(
                 PageInfo(
                   startCursor = firstEdge.map(_.cursor),
-                  endCursor = Option(endCursor),
-                  hasNextPage = if(endCursor.isEmpty) false else true,
-                  hasPreviousPage = if(decodedCursor.isEmpty) false else true
+                  endCursor = Option(nextCursor),
+                  hasNextPage = !nextCursor.isEmpty,
+                  hasPreviousPage = !currentCursor.isEmpty
                 ),
                 edges
               )

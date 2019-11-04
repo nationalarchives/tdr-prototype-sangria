@@ -40,12 +40,15 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     } yield (count, paginatedFiles)
   }
 
-  def getKeySetPagination(consignmentId: Int, limit: Int, after: String): Future[(String, Seq[FileEdge])] = {
+  def getKeySetPagination(consignmentId: Int, limit: Int, currentCursor: String): Future[(String, Seq[FileEdge])] = {
       for {
-        response <- fileDao.getKeySetPagination(consignmentId, limit + 1, after)
-        nextCursor = Base64.encode(response.last.path)
-        //count <- fileDao.getNumberOfFilesByConsignment(consignmentId)
-        paginatedFiles <- mapToEdges(response.dropRight(1))
+        //Limit increased by one to get the value of the next cursor
+        response <- fileDao.getKeySetPagination(consignmentId, limit + 1, currentCursor)
+        //Has a next page if limit + 1 results are retrieved
+        hasNextPage =  response.size > limit
+        nextCursor = if(hasNextPage) Base64.encode(response.last.path) else ""
+        pageFileRows = if(hasNextPage) response.dropRight(1) else response
+        paginatedFiles <- mapToEdges(pageFileRows)
       } yield (nextCursor, paginatedFiles)
   }
 

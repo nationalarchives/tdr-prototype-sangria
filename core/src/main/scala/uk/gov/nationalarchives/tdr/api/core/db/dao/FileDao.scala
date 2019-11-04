@@ -46,7 +46,7 @@ class FileDao(implicit val executionContext: ExecutionContext) {
         criteriaConsignment.map(f.consignmentId === _),
         criteriaAfter.map(f.path >= _))
       .collect({case Some(criteria) => criteria})
-      .reduceLeftOption(_ && _).getOrElse(true: Rep[Boolean])
+      .reduce(_ && _)
     }.sortBy(_.path).take(limit)
 
     db.run(consignment.result)
