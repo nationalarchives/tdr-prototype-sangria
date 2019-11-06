@@ -4,7 +4,6 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
-import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{TableQuery, Tag}
 import uk.gov.nationalarchives.tdr.api.core.db.DbConnection
@@ -31,10 +30,6 @@ class FileDao(implicit val executionContext: ExecutionContext) {
 
   def getNumberOfFilesByConsignment(consignmentId: Int): Future[Int] = {
     db.run(files.filter(_.consignmentId === consignmentId).size.result)
-  }
-
-  def getByConsignment(consignmentId: Int): Future[Seq[FileRow]] = {
-    db.run(files.filter(_.consignmentId === consignmentId).result)
   }
 
   def getKeySetPagination(consignmentId: Int, limit: Int, after: String): Future[Seq[FileRow]] = {

@@ -28,10 +28,6 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     )
   }
 
-  def getByConsignment(consignmentId: Int): Future[Seq[File]] = {
-    fileDao.getByConsignment(consignmentId).flatMap(fileRows => mapFileRows(fileRows))
-  }
-
   def getOffsetPagination(consignmentId: Int, limit: Int, offset: Int): Future[(Int, Seq[FileEdge])] = {
     for {
       response <- fileDao.getOffsetPagination(consignmentId, limit, offset)

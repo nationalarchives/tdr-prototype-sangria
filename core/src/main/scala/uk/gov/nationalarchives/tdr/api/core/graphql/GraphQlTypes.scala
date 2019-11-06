@@ -109,7 +109,7 @@ object GraphQlTypes {
   private def decode(value: String) = {
     Base64.decode(value) match {
       case Some(s) => s
-      case None => throw new Exception("Invalid cursor")
+      case None => throw new IllegalArgumentException("Invalid cursor: " + value)
     }
   }
 
