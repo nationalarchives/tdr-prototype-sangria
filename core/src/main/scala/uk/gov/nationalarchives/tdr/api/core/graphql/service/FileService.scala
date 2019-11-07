@@ -1,10 +1,11 @@
 package uk.gov.nationalarchives.tdr.api.core.graphql.service
 import java.util.UUID
 
+import sangria.relay.util.Base64
 import uk.gov.nationalarchives.tdr.api.core.db.dao.FileDao
 import uk.gov.nationalarchives.tdr.api.core.db.model.{FileRow, FileStatusRow}
 import uk.gov.nationalarchives.tdr.api.core.graphql
-import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, File, FileStatus}
+import uk.gov.nationalarchives.tdr.api.core.graphql.{CreateFileInput, File, FileEdge, FileStatus}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,8 +28,24 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
     )
   }
 
-  def getByConsignment(consignmentId: Int): Future[Seq[File]] = {
-    fileDao.getByConsignment(consignmentId).flatMap(fileRows => mapFileRows(fileRows))
+  def getOffsetPagination(consignmentId: Int, limit: Int, offset: Int): Future[(Int, Seq[FileEdge])] = {
+    for {
+      response <- fileDao.getOffsetPagination(consignmentId, limit, offset)
+      paginatedFiles <- mapToEdges(response)
+      count <- fileDao.getNumberOfFilesByConsignment(consignmentId)
+    } yield (count, paginatedFiles)
+  }
+
+  def getKeySetPagination(consignmentId: Int, limit: Int, currentCursor: String): Future[(String, Seq[FileEdge])] = {
+      for {
+        //Limit increased by one to get the value of the next cursor
+        response <- fileDao.getKeySetPagination(consignmentId, limit + 1, currentCursor)
+        //Has a next page if limit + 1 results are retrieved
+        hasNextPage =  response.size > limit
+        nextCursor = if(hasNextPage) Base64.encode(response.last.path) else ""
+        pageFileRows = if(hasNextPage) response.dropRight(1) else response
+        paginatedFiles <- mapToEdges(pageFileRows)
+      } yield (nextCursor, paginatedFiles)
   }
 
   def createMultiple(inputs: Seq[graphql.CreateFileInput]): Future[Seq[File]] = {
@@ -59,6 +76,12 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       r.lastModifiedDate, r.fileName)
   }
 
+  private def mapToEdges(fileRows: Seq[FileRow]) = {
+    mapFileRows(fileRows).map(fs => {
+      fs.map(f => FileEdge(f, Base64.encode(f.path)))
+    })
+  }
+
   private def mapFileRows(fileRows: Seq[FileRow]): Future[Seq[File]] = {
     val files = fileRows.map(fileRow =>
       consignmentService.get(fileRow.consignmentId).map(consignment =>
@@ -77,7 +100,5 @@ class FileService(fileDao: FileDao, fileStatusService: FileStatusService, consig
       fileStatus <- fileStatusService.create(persistedFile.id.get, input.clientSideChecksum)
     } yield
       getFileReturnValue(persistedFile, fileStatus)
-
-
   }
 }

@@ -31,6 +31,7 @@ lazy val core = (project in file("core"))
       "software.amazon.awssdk" % "ecs" % awsSdkVersion,
       "software.amazon.awssdk" % "ssm" % awsSdkVersion,
       "io.circe" %% "circe-generic" % "0.9.3",
+      "org.sangria-graphql" %% "sangria-relay" % "1.4.2"
     )
   )
 

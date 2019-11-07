@@ -15,6 +15,7 @@ import uk.gov.nationalarchives.tdr.api.core.graphql.CreateFileInput
 import scala.concurrent.{ExecutionContext, Future}
 
 class FileDao(implicit val executionContext: ExecutionContext) {
+
   private val db = DbConnection.db
 
   private val insertQuery = files returning files.map(_.id) into ((file, id) => file.copy(id = Some(id)))
@@ -27,8 +28,27 @@ class FileDao(implicit val executionContext: ExecutionContext) {
     db.run(files.filter(_.id === id).result).map(_.headOption)
   }
 
-  def getByConsignment(consignmentId: Int): Future[Seq[FileRow]] = {
-    db.run(files.filter(_.consignmentId === consignmentId).result)
+  def getNumberOfFilesByConsignment(consignmentId: Int): Future[Int] = {
+    db.run(files.filter(_.consignmentId === consignmentId).size.result)
+  }
+
+  def getKeySetPagination(consignmentId: Int, limit: Int, after: String): Future[Seq[FileRow]] = {
+    val criteriaConsignment = Option(consignmentId)
+    val criteriaAfter = Option(after)
+
+    val consignment = files.filter { f =>
+      List(
+        criteriaConsignment.map(f.consignmentId === _),
+        criteriaAfter.map(f.path >= _))
+      .collect({case Some(criteria) => criteria})
+      .reduce(_ && _)
+    }.sortBy(_.path).take(limit)
+
+    db.run(consignment.result)
+  }
+
+  def getOffsetPagination(consignmentId: Int, limit: Int, offset: Int): Future[Seq[FileRow]] = {
+    db.run (files.filter(_.consignmentId === consignmentId).sortBy(_.path).drop(offset).take(limit).result)
   }
 
   def create(file: FileRow): Future[FileRow] = {
