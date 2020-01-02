@@ -8,7 +8,8 @@ import uk.gov.nationalarchives.tdr.api.core.monitoring.Metrics
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesService)(implicit val executionContext: ExecutionContext) {
+class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesService, metrics: Metrics)
+                        (implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[Consignment]] = {
     consignmentDao.all.flatMap(consignmentRows => {
@@ -41,7 +42,7 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
     val result = consignmentDao.create(newConsignment)
 
     result.flatMap(persistedConsignment => {
-      Metrics.recordConsignmentCreation(transferringBody)
+      metrics.recordConsignmentCreation(transferringBody)
 
       seriesService.get(persistedConsignment.seriesId).map(series =>
         Consignment(persistedConsignment.id.get, persistedConsignment.name, series.get,
@@ -53,6 +54,7 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
   def confirmTransfer(consignmentId: Int): Future[Boolean] = {
     consignmentDao.updateProgress(consignmentId, "CONFIRMED")
       .map(_ => {
+        metrics.recordConsignmentTransferConfirmation(consignmentId)
         ConsignmentExport.startExport(consignmentId)
         true
       })
