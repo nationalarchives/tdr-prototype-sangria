@@ -4,7 +4,7 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 lazy val akkaHttpVersion = "10.1.9"
 lazy val akkaVersion    = "2.6.0-M5"
-lazy val awsSdkVersion = "2.9.11"
+lazy val awsSdkVersion = "2.10.41"
 
 enablePlugins(GraphQLSchemaPlugin)
 
