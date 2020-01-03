@@ -8,6 +8,7 @@ import sangria.parser.QueryParser
 import uk.gov.nationalarchives.tdr.api.core.db.dao._
 import uk.gov.nationalarchives.tdr.api.core.graphql.service._
 import uk.gov.nationalarchives.tdr.api.core.graphql.{DeferredResolver, GraphQlTypes, RequestContext}
+import uk.gov.nationalarchives.tdr.api.core.monitoring.Metrics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -16,7 +17,9 @@ import scala.util.{Failure, Success, Try}
 object GraphQlServer {
 
   private val seriesService = new SeriesService(new SeriesDao)
-  private val consignmentService = new ConsignmentService(new ConsignmentDao, seriesService)
+  private val consignmentDao = new ConsignmentDao
+  private val metrics = new Metrics(consignmentDao)
+  private val consignmentService = new ConsignmentService(consignmentDao, seriesService, metrics)
   private val fileStatusService = new FileStatusService(new FileStatusDao())
   private val fileFormatService = new FileFormatService(new FileFormatDao())
   private val fileService = new FileService(new FileDao, fileStatusService, consignmentService, fileFormatService)

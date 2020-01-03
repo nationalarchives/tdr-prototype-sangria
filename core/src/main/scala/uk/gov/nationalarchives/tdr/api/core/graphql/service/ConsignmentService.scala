@@ -3,11 +3,13 @@ package uk.gov.nationalarchives.tdr.api.core.graphql.service
 import uk.gov.nationalarchives.tdr.api.core.db.backgroundtask.ConsignmentExport
 import uk.gov.nationalarchives.tdr.api.core.db.dao.ConsignmentDao
 import uk.gov.nationalarchives.tdr.api.core.db.model.ConsignmentRow
-import uk.gov.nationalarchives.tdr.api.core.graphql.{Consignment, Series}
+import uk.gov.nationalarchives.tdr.api.core.graphql.Consignment
+import uk.gov.nationalarchives.tdr.api.core.monitoring.Metrics
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesService)(implicit val executionContext: ExecutionContext) {
+class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesService, metrics: Metrics)
+                        (implicit val executionContext: ExecutionContext) {
 
   def all: Future[Seq[Consignment]] = {
     consignmentDao.all.flatMap(consignmentRows => {
@@ -39,17 +41,20 @@ class ConsignmentService(consignmentDao: ConsignmentDao, seriesService: SeriesSe
     val newConsignment = ConsignmentRow(None, name, "NEW", seriesId, creator, transferringBody)
     val result = consignmentDao.create(newConsignment)
 
-    result.flatMap(persistedConsignment =>
+    result.flatMap(persistedConsignment => {
+      metrics.recordConsignmentCreation(transferringBody)
+
       seriesService.get(persistedConsignment.seriesId).map(series =>
         Consignment(persistedConsignment.id.get, persistedConsignment.name, series.get,
           persistedConsignment.creator, persistedConsignment.transferringBody)
       )
-    )
+    })
   }
 
   def confirmTransfer(consignmentId: Int): Future[Boolean] = {
     consignmentDao.updateProgress(consignmentId, "CONFIRMED")
       .map(_ => {
+        metrics.recordConsignmentTransferConfirmation(consignmentId)
         ConsignmentExport.startExport(consignmentId)
         true
       })
